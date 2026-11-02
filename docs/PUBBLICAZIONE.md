@@ -104,3 +104,25 @@ Quando la sessione di accesso scade (30 giorni predefiniti), online ti verrà ri
 ## Aggiornamenti
 
 Pubblica di nuovo con `npm run deploy`. All’apertura successiva l’app mostra “Nuova versione disponibile → Aggiorna”. I dati locali non vengono toccati.
+
+## Schermata nera / “L’app non si è avviata”
+
+La pagina arriva ma il JavaScript dell’app no. Quasi sempre è stato pubblicato il **codice sorgente** (cartella del repository o ZIP) invece della **build** `dist/`: in quel caso il browser riceve `/src/main.tsx`, che non può eseguire.
+
+**Se hai collegato GitHub** (Workers & Pages → forma-lab → Settings → Build):
+
+| Campo | Valore |
+|---|---|
+| Framework preset | `None` (oppure `Vite`) |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Root directory | vuoto (radice del repository) |
+| Variabile d’ambiente | `NODE_VERSION` = `22` |
+
+Poi Deployments → **Retry deployment** e controlla nel log che compaiano `✓ built` e `precache … entries`.
+
+**Non usare il caricamento manuale (“Upload assets”, trascinare una cartella o lo ZIP)**: oltre a non compilare l’app, non pubblica la cartella `functions/`, quindi il sito sarebbe **senza protezione di accesso**. Usa il collegamento GitHub oppure `npm run deploy` dal tuo computer.
+
+Verifica rapida: aprendo l’indirizzo in una finestra privata devi vedere la pagina **“Accesso privato”** (o quella di Cloudflare Access). Se vedi direttamente l’app o la schermata nera senza login, `functions/` non è stata pubblicata.
+
+Se compare “Accesso non configurato” (errore 503) mancano i segreti del passo 3: dopo averli aggiunti serve un nuovo deployment.
