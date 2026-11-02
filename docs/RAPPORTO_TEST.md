@@ -1,4 +1,34 @@
-# FASE 7 — Rapporto di verifica
+# Rapporto di verifica — FORMA LAB 3.0
+
+Aggiornamento del 2 novembre 2026 (versione 3.0). Le sezioni successive riportano anche le verifiche della 2.0, ancora valide.
+
+| Suite | Risultato |
+|---|---|
+| Test unitari (`npm test`) | **51/51** (+5 sulle animazioni: copertura 25/25, errori coerenti con le schede, ❌/✅ per esercizio, scheletro valido in ~2.700 fotogrammi) |
+| End-to-end (`npm run test:e2e`) — iPhone 14 Pro, iPhone SE 320 px, desktop | **133/133** |
+| Accesso con PIN nel runtime Cloudflare locale + browser | Superato (PIN errato rifiutato, PIN corretto → app, sessione 365 giorni) |
+| Sito pubblicato `forma-lab.pages.dev` | Verificato da qui: risponde con la pagina di accesso PIN (la build attualmente online è la 2.0: va ripubblicata la 3.0) |
+
+**Nuove verifiche superate (e2e):** l’animazione tecnica parte da sola e cambia fotogramma; la modalità “Errori e correzioni” elenca gli errori e permette di saltarci; la dimostrazione è visibile subito nella modalità allenamento; il video personale importato si riproduce muto, inline e in loop; un’annotazione rossa disegnata sul video compare con il badge ❌; video e annotazioni restano dopo il ricaricamento; la scheda Calendario mostra giorni programmati ed eseguiti; nessuno scorrimento orizzontale né controlli senza nome su tutte le schermate.
+
+**Corretti durante lo sviluppo 3.0:** contrasto del giorno eseguito nel calendario; durata della sequenza errori ridotta da ~44 s a 16–22 s per avvicinarsi ai riferimenti; il volume del petto del manichino era disegnato sul lato della schiena.
+
+**Ancora da verificare sul tuo iPhone (non eseguibile qui):**
+1. Apri 3–4 esercizi: l’animazione deve partire da sola, senza audio, e ripetersi. Prova ½× e lo schermo intero.
+2. “Aggiungi il tuo video” → registra 10 s con la Fotocamera → deve riprodursi muto e in loop dentro la pagina (non a schermo intero forzato). Aggiungi un ❌ e una linea, chiudi l’app, riaprila: devono esserci ancora.
+3. Modalità aereo: le animazioni funzionano; il video personale anche (è salvato sul telefono); i riferimenti YouTube no (atteso).
+4. Guarda gli MP4 esportati inviati in chat: devono aprirsi e ripetersi nell’app File/Foto.
+
+**Funzioni incomplete o non verificabili (dichiarate):**
+- Video di **atleti reali** con annotazioni: la funzione è pronta, ma i filmati vanno registrati da te (0/50); nessun filmato di terzi con licenza modificabile è stato trovato.
+- Le animazioni sono **schematiche** (2D): non sono un atleta reale; serve una revisione biomeccanica da parte di un professionista.
+- Notifiche a fine recupero: non supportate da iOS per le app web senza server push; il segnale suona solo con l’app aperta.
+- I video personali **non** sono inclusi nel backup JSON (troppo grandi): restano sul dispositivo.
+- Test su Safari/WebKit e su iPhone reale non eseguibili in questo ambiente.
+
+---
+
+# Rapporto di verifica — versione 2.0
 
 Data: 2 novembre 2026. Ambiente: Linux, Node 22, Chromium (Playwright) con emulazione di iPhone 14 Pro (viewport 393×660 con barre di Safari, touch, DPR 3), iPhone SE 1ª gen. (320×568) e desktop 1280×860; runtime Cloudflare locale (`wrangler pages dev`, workerd).
 

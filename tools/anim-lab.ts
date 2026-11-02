@@ -37,3 +37,17 @@ for (const spec of ANIMATIONS.filter((a) => !only || a.exerciseId === only)) {
   out.appendChild(row);
 }
 document.title = 'ready';
+
+// Export hook used by scripts/export-animations.mjs
+(window as unknown as Record<string, unknown>).renderFrame = (ex: string, mode: 'quick' | 'errors', t: number, w = 720) => {
+  const spec = ANIMATIONS.find((a) => a.exerciseId === ex)!;
+  const b = build(spec, mode);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = Math.round((w * H) / W);
+  const ctx = c.getContext('2d')!;
+  ctx.scale(w / W, w / W);
+  drawFrame(ctx, frameAt(spec, b, t, ['Esecuzione controllata']));
+  return c.toDataURL('image/jpeg', 0.9);
+};
+(window as unknown as Record<string, unknown>).animDuration = (ex: string, mode: 'quick' | 'errors') => build(ANIMATIONS.find((a) => a.exerciseId === ex)!, mode).total;

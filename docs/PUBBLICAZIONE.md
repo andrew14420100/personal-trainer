@@ -147,3 +147,17 @@ Poi Deployments → **Retry deployment** e controlla nel log che compaiano `✓ 
 Verifica rapida: aprendo l’indirizzo in una finestra privata devi vedere la pagina **“Accesso privato”** (o quella di Cloudflare Access). Se vedi direttamente l’app o la schermata nera senza login, `functions/` non è stata pubblicata.
 
 Se compare “Accesso non configurato” (errore 503) mancano i segreti del passo 3: dopo averli aggiunti serve un nuovo deployment.
+
+## Aggiornare a FORMA LAB 3.0
+
+Il progetto Cloudflare e i segreti (PIN) restano gli stessi: basta ripubblicare dalla cartella del progetto.
+
+```bash
+git pull
+```
+
+```bash
+npm ci && npm run deploy
+```
+
+All’apertura successiva l’app mostra “Nuova versione disponibile → Aggiorna”. I dati restano sul dispositivo; il database locale passa alla versione 2 (aggiunge l’archivio dei video personali) senza perdere nulla.

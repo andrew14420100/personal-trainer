@@ -1,11 +1,11 @@
-# FORMA LAB 2.0
+# FORMA LAB 3.0
 
 Applicazione personale di allenamento per iPhone: PWA installabile dalla schermata Home, privata, offline dove possibile, gratuita.
 
 | | |
 |---|---|
 | **Scheda** | 4 giorni (Lun Upper A · Mar Lower A · Gio Upper B · Ven Lower B), 26 posizioni, 25 esercizi distinti |
-| **Video** | 57 video YouTube reali, verificati via oEmbed: dimostrazione rapida + tutorial per tutti i 25 esercizi, lacune dichiarate |
+| **Video** | Animazioni tecniche originali per tutti i 25 esercizi (❌ rosso → ✅ verde sul movimento, loop silenzioso, offline) + i tuoi video reali annotabili nell’app; 57 video YouTube verificati come fonte esterna secondaria — vedi [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) |
 | **Tecnica** | Pagina completa per ogni esercizio: preparazione, esecuzione, respirazione, errori in ROSSO → correzioni in VERDE, alternative |
 | **Allenamento** | Un esercizio alla volta, carichi/ripetizioni/RIR/tecnica/note, timer di recupero automatico, riepilogo con confronti |
 | **Progressi** | Storico, grafici interattivi, calendario, confronti settimanali, misure corporee, suggerimenti di progressione |
@@ -33,13 +33,14 @@ Apre l’app in sviluppo su `http://localhost:5173` (senza autenticazione: il mi
 | Comando | Cosa fa |
 |---|---|
 | `npm run build` | Type-check + build di produzione in `dist/` (PWA con service worker) |
-| `npm test` | 42 test unitari (scheda vs brief, statistiche, progressione, IndexedDB, backup cifrato, TOTP, middleware, JWT Access) |
+| `npm test` | 51 test unitari (scheda vs brief, animazioni, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
 | `npm run test:e2e` | Test end-to-end Playwright sulla build (viewport iPhone 14 Pro, iPhone SE, desktop; offline; backup) |
 | `npm run verify:videos` | Riverifica tutti i video via oEmbed e rigenera `docs/VERIFICA_VIDEO.md` |
 | `npm run totp:new` | Genera passphrase, segreto TOTP e chiave di sessione per l’accesso privato |
 | `npm run build:preview` | Build a file singolo per l’anteprima in Claude (`dist-preview/`) |
 | `npm run deploy` | Build + pubblicazione su Cloudflare Pages con Wrangler |
 | `npm run icons` | Rigenera le icone PNG da `public/icons/icon.svg` |
+| `node scripts/export-animations.mjs out <id…>` | Esporta animazioni in MP4 H.264 (con `npx vite --port 5190` attivo) |
 
 I test e2e e lo script delle icone usano Playwright con Chromium (`npm i -D playwright` se non è già disponibile nel sistema).
 
@@ -48,8 +49,9 @@ I test e2e e lo script delle icone usano Playwright con Chromium (`npm i -D play
 ```
 src/
   app/          App, routing delle schermate, store reattivo sui dati locali
-  components/   UI (TopBar, Sheet, Stepper…), VideoPlayer, BodyMap, Charts, Technique, Shell (tab bar, timer)
-  screens/      Home, Program/Day, ExerciseDetail, Workout, Summary, Progress, Videos, Settings
+  anim/         motore delle animazioni tecniche: rig cinematico, renderer, timeline A·B·C·D, libreria 25 scene
+  components/   UI, MediaHero, UserVideo (video personali annotati), VideoPlayer (YouTube), BodyMap, Charts, Technique, Shell
+  screens/      Home, Program/Day, ExerciseDetail, Workout, Summary, Progress, Calendar, Videos, Settings
   data/         program.ts (scheda), exercises.ts (contenuti tecnici), videos.ts (videoteca + verifica), media.ts (foto e licenze)
   lib/          db (IndexedDB), workout (registro), stats, progression, plan (calibrazione/override), timer,
                 backup (export/import cifrato), settings, router, wakelock, format
@@ -68,7 +70,8 @@ docs/           analisi, pubblicazione, privacy, verifica video, rapporto test, 
 - [docs/DESIGN.md](docs/DESIGN.md) — design system “cinematic”
 - [docs/PUBBLICAZIONE.md](docs/PUBBLICAZIONE.md) — pubblicazione privata su HTTPS e installazione su iPhone, passo per passo
 - [docs/PRIVACY.md](docs/PRIVACY.md) — dove sono i dati, accesso, backup
-- [docs/VERIFICA_VIDEO.md](docs/VERIFICA_VIDEO.md) — scheda di verifica per ognuno dei video
+- [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) — analisi dei video di riferimento, fonti, animazioni, video personali
+- [docs/VERIFICA_VIDEO.md](docs/VERIFICA_VIDEO.md) — scheda di verifica dei riferimenti YouTube
 - [docs/RAPPORTO_TEST.md](docs/RAPPORTO_TEST.md) — verifiche superate, fallite (e corrette) e non eseguibili
 
 ## Stack e motivazioni

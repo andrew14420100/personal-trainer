@@ -12,6 +12,8 @@ export interface Segment {
   dur: number;
   kind: 'setup' | 'bad' | 'fix' | 'good' | 'demo';
   error?: AnimError;
+  /** Playback pace of the repetitions in this segment. */
+  speed: number;
 }
 
 interface Built {
@@ -20,6 +22,8 @@ interface Built {
 }
 
 const repDur = (spec: AnimSpec) => spec.rep ?? 2.8;
+/** Duration of the red → green morph at the start of a correction. */
+const FIX = 0.7;
 
 /** Normalised position (0 = start pose, 1 = end pose) inside a repetition. */
 function repK(x: number): number {
@@ -56,16 +60,20 @@ export function build(spec: AnimSpec, mode: 'quick' | 'errors'): Built {
     t += s.dur;
   };
   if (mode === 'quick') {
-    push({ id: 'demo', label: 'Esecuzione', dur: spec.hold ? 6 : d * 3, kind: 'demo' });
+    push({ id: 'demo', label: 'Esecuzione', dur: spec.hold ? 6 : d * 3, kind: 'demo', speed: 1 });
     return { segments: segs, total: t };
   }
-  push({ id: 'setup', label: 'Posizione', dur: 2.2, kind: 'setup' });
+  // Fast, comparison-style pace (like short social technique clips): one faulty rep, the
+  // correction, one clean rep; then two clean reps to close the loop.
+  const pace = 1.3;
+  const rd = d / pace;
+  push({ id: 'setup', label: 'Posizione', dur: 1.8, kind: 'setup', speed: 1 });
   for (const e of spec.errors) {
-    const sp = e.speed ?? 1;
-    push({ id: `${e.id}-bad`, label: e.bad, dur: spec.hold ? 3.2 : (d / sp) * 2, kind: 'bad', error: e });
-    push({ id: `${e.id}-fix`, label: e.good, dur: spec.hold ? 3.6 : 0.9 + d * 2, kind: 'fix', error: e });
+    const sp = pace * (e.speed ?? 1);
+    push({ id: `${e.id}-bad`, label: e.bad, dur: spec.hold ? 2.6 : (d / sp) * (e.speed && e.speed > 1.5 ? 2 : 1), kind: 'bad', error: e, speed: sp });
+    push({ id: `${e.id}-fix`, label: e.good, dur: spec.hold ? 3 : FIX + rd, kind: 'fix', error: e, speed: pace });
   }
-  push({ id: 'final', label: 'Esecuzione corretta', dur: spec.hold ? 4 : d * 2, kind: 'good' });
+  push({ id: 'final', label: 'Esecuzione corretta', dur: spec.hold ? 3 : rd * 2, kind: 'good', speed: pace });
   return { segments: segs, total: t };
 }
 
@@ -75,18 +83,17 @@ function poseAt(spec: AnimSpec, seg: Segment, local: number): { pose: Pose; tone
     case 'setup':
       return { pose: spec.start, tone: 1 };
     case 'bad':
-      return { pose: poseInRep(spec, e, 1, local, e?.speed ?? 1), tone: 0 };
+      return { pose: poseInRep(spec, e, 1, local, seg.speed), tone: 0 };
     case 'fix': {
-      const m = 0.9;
-      if (local < m) {
-        const k = ease(local / m);
+      if (local < FIX) {
+        const k = ease(local / FIX);
         // from the faulty start position to the correct one, colour red → green
         return { pose: applyDelta(spec.start, e?.start, 1 - k), tone: k };
       }
-      return { pose: poseInRep(spec, e, 0, local - m, 1), tone: 1 };
+      return { pose: poseInRep(spec, e, 0, local - FIX, seg.speed), tone: 1 };
     }
     default:
-      return { pose: poseInRep(spec, undefined, 0, local, 1), tone: 1 };
+      return { pose: poseInRep(spec, undefined, 0, local, seg.speed), tone: 1 };
   }
 }
 
@@ -116,8 +123,8 @@ export function frameAt(spec: AnimSpec, built: Built, time: number, cues: string
       break;
     case 'fix':
       overlays = seg.error!.overlays;
-      badge = local > 0.55 ? 'good' : 'bad';
-      caption = local > 0.55 ? seg.error!.good : seg.error!.bad;
+      badge = local > FIX * 0.6 ? 'good' : 'bad';
+      caption = local > FIX * 0.6 ? seg.error!.good : seg.error!.bad;
       phase = `C · CORREZIONE ${errIdx}/${spec.errors.length}`;
       break;
     case 'good':
@@ -134,16 +141,15 @@ export function frameAt(spec: AnimSpec, built: Built, time: number, cues: string
       break;
     }
   }
-  const badgeStart = seg.kind === 'fix' ? 0.55 : 0;
+  const badgeStart = seg.kind === 'fix' ? FIX * 0.6 : 0;
   const badgeT = Math.max(0, local - badgeStart);
 
   // trail of a joint over the current repetition (bar path, hand path…)
   const trail: Vec[] = [];
   const tr = overlays.find((o) => o.t === 'trail') as Extract<Overlay, { t: 'trail' }> | undefined;
   if (tr && !spec.hold) {
-    const speed = seg.kind === 'bad' ? (seg.error?.speed ?? 1) : 1;
-    const d = repDur(spec) / speed;
-    const off = seg.kind === 'fix' ? 0.9 : 0;
+    const d = repDur(spec) / seg.speed;
+    const off = seg.kind === 'fix' ? FIX : 0;
     const inRep = local - off;
     if (inRep > 0) {
       const cycleStart = inRep - (inRep % d);
