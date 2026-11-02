@@ -40,7 +40,7 @@ async function layoutChecks(page, label) {
     document.querySelectorAll('body *').forEach((el) => {
       const b = el.getBoundingClientRect();
       if (!b.width || getComputedStyle(el).position === 'fixed') return;
-      if (el.closest('.phases,.chart,.sheet-backdrop,.hero,.day-card,.player,.ex-thumb')) return; // horizontally scrollable or clipped (overflow:hidden)
+      if (el.closest('.phases,.anim-chips,.chart,.sheet-backdrop,.hero,.day-card,.player,.ex-thumb')) return; // horizontally scrollable or clipped (overflow:hidden)
       if (b.right > vw + 1 || b.left < -1) over.push(`${el.tagName.toLowerCase()}.${el.className}`.slice(0, 60));
     });
     const unnamed = [...document.querySelectorAll('button, a[href], input, select, textarea')].filter((el) => {
@@ -76,7 +76,7 @@ async function run(deviceName, label, full) {
   await layoutChecks(page, `${label} home`);
 
   // Program: 4 days, 26 positions
-  await page.getByRole('button', { name: 'Scheda', exact: true }).click();
+  await page.getByRole('button', { name: 'Allenamenti', exact: true }).click();
   await page.waitForSelector('.day-card');
   check(`[${label}] program shows 4 days`, (await page.locator('.day-card').count()) === 4);
   await page.screenshot({ path: join(shots, `${label}-02-program.png`), fullPage: true });
@@ -91,26 +91,54 @@ async function run(deviceName, label, full) {
   check(`[${label}] 26 exercise positions across the 4 days`, total === 26, `found ${total}`);
   await layoutChecks(page, `${label} day`);
 
-  // Exercise page
+  // Exercise page: technical animation first (video-first layout)
   await page.goto(`${BASE}/#/esercizio/chest-press?slot=upper-a-1`);
-  await page.waitForSelector('.player');
-  check(`[${label}] exercise page has video player facade`, await page.locator('.player-facade').isVisible());
+  await page.waitForSelector('.anim-stage canvas');
+  const px = async () => page.locator('.anim-stage canvas').first().evaluate((c) => c.toDataURL().length + ':' + c.toDataURL().slice(5000, 5200));
+  const f1 = await px();
+  await page.waitForTimeout(900);
+  const f2 = await px();
+  check(`[${label}] technical animation plays automatically (frames change)`, f1 !== f2);
   const sections = await page.locator('.section-title').allInnerTexts();
   check(`[${label}] exercise sections in order`, ['PRESCRIZIONE', 'TECNICA', 'ERRORI E CORREZIONI', 'ALTERNATIVE', 'NOTE PERSONALI', 'STORICO PRESTAZIONI'].every((s, i, a) => sections.map((x) => x.toUpperCase()).indexOf(s) >= (i ? sections.map((x) => x.toUpperCase()).indexOf(a[i - 1]) : 0)), sections.join(' > '));
-  await page.getByRole('tab', { name: 'Tutorial completo' }).click();
-  await page.waitForSelector('.phases');
-  check(`[${label}] tutorial shows 5 phases`, (await page.locator('.phase-btn').count()) === 5);
-  await page.getByRole('tab', { name: /Errori/ }).click();
+  await page.getByRole('tab', { name: 'Errori e correzioni' }).click();
+  await page.waitForSelector('.anim-chip.bad');
+  check(`[${label}] errors mode lists the faults (✕ chips)`, (await page.locator('.anim-chip.bad').count()) >= 2);
+  await page.locator('.anim-chip.bad').first().click();
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: join(shots, `${label}-04-exercise.png`), fullPage: false });
+  check(`[${label}] guided tutorial shows 5 phases`, (await page.locator('.phase-btn').count()) === 5);
+  await page.getByRole('tab', { name: /Errori/ }).last().click();
   check(`[${label}] errors phase shows RED cards`, (await page.locator('.phases ~ .card .fix-side.wrong').count()) >= 3);
-  await page.getByRole('tab', { name: /Correzione/ }).click();
-  check(`[${label}] correction phase shows GREEN`, (await page.locator('.fix-side.right').count()) >= 1);
   await page.locator('.fix-card .btn', { hasText: 'Correggi' }).first().click();
-  await page.screenshot({ path: join(shots, `${label}-04-exercise.png`), fullPage: true });
-  // Video fallback when YouTube is unreachable: never a stuck player
+  check(`[${label}] correction shows GREEN`, (await page.locator('.fix-side.right').count()) >= 1);
+  // External YouTube reference is secondary and never a stuck player
+  await page.locator('details.disclosure summary', { hasText: 'Video YouTube di riferimento' }).click();
   await page.locator('.player-facade').click();
   await page.waitForSelector('.player-msg >> text=Apri su YouTube', { timeout: 20000 });
-  check(`[${label}] blocked video shows link to original source`, (await page.locator('a[href^="https://www.youtube.com/watch?v=4YpxZXFADmc"]').count()) >= 1);
+  check(`[${label}] blocked external video shows link to original source`, (await page.locator('a[href^="https://www.youtube.com/watch?v=sqNwDkUU_Ps"]').count()) >= 1);
   await layoutChecks(page, `${label} exercise`);
+  // Own footage: import, muted inline looping playback, red/green annotation, persistence
+  await page.getByRole('tab', { name: 'Dimostrazione' }).click();
+  await page.getByRole('button', { name: /Aggiungi il tuo video/ }).click();
+  await page.locator('input[type=file][accept="video/*"]').first().setInputFiles(join(root, 'tests/e2e/sample-athlete.mp4'));
+  await page.waitForSelector('.uv-stage video', { timeout: 10000 });
+  await page.waitForTimeout(1500);
+  const vstate = await page.locator('.uv-stage video').evaluate((v) => ({ t: v.currentTime, muted: v.muted, loop: v.loop, inline: v.playsInline, paused: v.paused }));
+  check(`[${label}] own video plays muted, inline and looping`, vstate.t > 0.3 && vstate.muted && vstate.loop && vstate.inline && !vstate.paused, JSON.stringify(vstate));
+  await page.getByRole('button', { name: /Annota/ }).click();
+  await page.getByRole('button', { name: /Errore qui/ }).click();
+  await page.locator('.uv-stage').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(300);
+  const box = await page.locator('.uv-stage').boundingBox();
+  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.45);
+  await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.55);
+  await page.waitForTimeout(300);
+  check(`[${label}] red annotation drawn on own video`, (await page.locator('.uv-overlay line[stroke="#ff3b47"]').count()) >= 1 && (await page.locator('.uv-badge.bad').count()) >= 1);
+  await page.screenshot({ path: join(shots, `${label}-04b-own-video.png`) });
+  await page.reload();
+  await page.waitForSelector('.uv-stage video', { timeout: 10000 });
+  check(`[${label}] own video and annotations persist after reload`, (await page.locator('.uv-stage video').count()) === 1);
   // Favorite + note persist
   await page.getByRole('button', { name: 'Aggiungi ai preferiti' }).click();
   await page.getByRole('textbox', { name: 'Note personali' }).fill('Sedile 4');
@@ -121,6 +149,7 @@ async function run(deviceName, label, full) {
   await page.getByRole('button', { name: /Inizia Upper A/ }).click();
   await page.waitForSelector('.set-row');
   check(`[${label}] workout mode opened`, await page.getByText('Esercizio 1 di 7').isVisible());
+  check(`[${label}] workout shows the demo (animation or own video)`, (await page.locator('.anim-stage canvas, .uv-stage video').count()) === 1);
   const exCount = 7;
   for (let e = 0; e < exCount; e++) {
     const rows = page.locator('.set-row');
@@ -184,8 +213,12 @@ async function run(deviceName, label, full) {
   await page.locator('.chart').first().click();
   check(`[${label}] chart tooltip on tap`, await page.locator('.chart-tip').first().isVisible());
   await page.screenshot({ path: join(shots, `${label}-08-charts.png`), fullPage: true });
-  await page.goto(`${BASE}/#/progressi?tab=calendario`);
-  check(`[${label}] calendar marks the training day`, (await page.locator('.cal .c.done').count()) === 1);
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
+  await page.waitForSelector('.cal');
+  check(`[${label}] calendar tab marks the training day`, (await page.locator('.cal .c.done').count()) === 1);
+  check(`[${label}] calendar shows programmed days`, (await page.locator('.cal .cal-dot').count()) >= 4);
+  await page.screenshot({ path: join(shots, `${label}-08b-calendar.png`), fullPage: true });
+  await layoutChecks(page, `${label} calendar`);
   await page.goto(`${BASE}/#/progressi?tab=misure`);
   await page.getByRole('button', { name: /Nuova misurazione/ }).click();
   await page.getByLabel('Peso corporeo (kg)').fill('78,5');
@@ -211,6 +244,7 @@ async function run(deviceName, label, full) {
     await page.screenshot({ path: join(shots, `${label}-10-settings.png`), fullPage: true });
     await page.getByRole('button', { name: /Cancella tutti i dati personali/ }).click();
     await page.getByRole('button', { name: 'Cancella tutto' }).click();
+    await page.getByText('Dati cancellati').waitFor({ timeout: 5000 });
     await page.goto(BASE + '/');
     check(`[${label}] wipe removes data`, await page.getByText('Il tuo registro parte da zero').isVisible());
     await page.goto(`${BASE}/#/impostazioni`);

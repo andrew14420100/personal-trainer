@@ -1,21 +1,21 @@
 import { useEffect, useRef } from 'react';
-import { CalendarDays, Dumbbell, LineChart, PlayCircle, Settings2, Pause, Play, Plus, X } from 'lucide-react';
+import { CalendarDays, Dumbbell, Home, LineChart, Settings2, Pause, Play, Plus, X } from 'lucide-react';
 import { navigate, useRoute } from '../lib/router';
 import { beep, formatClock, timer, useTimer } from '../lib/timer';
 import { useData } from '../app/store';
 
 const TABS = [
-  { path: '', label: 'Oggi', icon: CalendarDays },
-  { path: 'scheda', label: 'Scheda', icon: Dumbbell },
+  { path: '', label: 'Oggi', icon: Home },
+  { path: 'scheda', label: 'Allenamenti', icon: Dumbbell },
+  { path: 'calendario', label: 'Calendario', icon: CalendarDays },
   { path: 'progressi', label: 'Progressi', icon: LineChart },
-  { path: 'video', label: 'Video', icon: PlayCircle },
   { path: 'impostazioni', label: 'Profilo', icon: Settings2 },
 ];
 
 export function TabBar() {
   const { path } = useRoute();
   const root = path[0] ?? '';
-  const map: Record<string, string> = { giorno: 'scheda', esercizio: 'scheda', sessione: 'progressi', riepilogo: 'progressi', info: 'impostazioni' };
+  const map: Record<string, string> = { giorno: 'scheda', esercizio: 'scheda', video: 'scheda', sessione: 'progressi', riepilogo: 'progressi', info: 'impostazioni' };
   const active = map[root] ?? root;
   return (
     <div className="tabbar">

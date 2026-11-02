@@ -21,6 +21,8 @@ export interface Settings {
   notes: Record<string, string>;
   /** Video reviews by the user after watching: youtubeId → status. */
   videoReviews: Record<string, { status: 'approvato' | 'non adatto'; date: string }>;
+  /** Video / animation preferences. */
+  video: { autoplay: boolean; labels: boolean; speed: number; defaultMode: 'quick' | 'errors' };
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -34,11 +36,12 @@ export const DEFAULT_SETTINGS: Settings = {
   favorites: [],
   notes: {},
   videoReviews: {},
+  video: { autoplay: true, labels: true, speed: 1, defaultMode: 'quick' },
 };
 
 export async function loadSettings(): Promise<Settings> {
   const stored = await kvGet<Partial<Settings>>('settings');
-  return { ...DEFAULT_SETTINGS, ...(stored ?? {}) };
+  return { ...DEFAULT_SETTINGS, ...(stored ?? {}), video: { ...DEFAULT_SETTINGS.video, ...(stored?.video ?? {}) } };
 }
 
 export async function saveSettings(s: Settings): Promise<void> {

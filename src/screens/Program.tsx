@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Dumbbell, Activity, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Clapperboard, Clock, Dumbbell, Activity, AlertTriangle } from 'lucide-react';
 import { useData } from '../app/store';
 import { DAYS, DAY_BY_ID, SLOTS } from '../data/program';
 import { EXERCISES, EXERCISE_BY_ID } from '../data/exercises';
@@ -26,11 +26,23 @@ export function Program() {
         Scheda personale · 4 giorni
       </div>
       <h1 className="display h1" style={{ marginTop: 6 }}>
-        La scheda
+        Allenamenti
       </h1>
       <p className="text-2" style={{ marginTop: 8 }}>
         {SLOTS.length} posizioni di esercizio, {EXERCISES.length} esercizi distinti (il Calf Raise compare martedì e venerdì).
       </p>
+      <button className="card tap tight row between" style={{ marginTop: 14 }} onClick={() => navigate('/video')}>
+        <span className="row" style={{ gap: 10 }}>
+          <Clapperboard size={20} color="var(--action)" />
+          <span>
+            <b>Videoteca tecnica</b>
+            <span className="small text-2" style={{ display: 'block' }}>
+              Animazioni ✕ / ✓ per tutti gli esercizi, i tuoi video, storyboard
+            </span>
+          </span>
+        </span>
+        <ArrowRight size={18} />
+      </button>
       <div className="stack" style={{ marginTop: 18, gap: 12 }}>
         {DAYS.map((d) => {
           const sl = effectiveDay(d.id, settings, calibration);

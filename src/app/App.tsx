@@ -11,6 +11,7 @@ import { Summary } from '../screens/Summary';
 import { Progress } from '../screens/Progress';
 import { Videos } from '../screens/Videos';
 import { Settings } from '../screens/Settings';
+import { Calendar } from '../screens/Calendar';
 import { UpdatePrompt } from '../components/UpdatePrompt';
 import { PreviewBar } from '../preview/PreviewBar';
 import type { DayId } from '../data/types';
@@ -53,6 +54,9 @@ export function App() {
       break;
     case 'video':
       screen = <Videos />;
+      break;
+    case 'calendario':
+      screen = <Calendar />;
       break;
     case 'impostazioni':
       screen = <Settings />;

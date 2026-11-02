@@ -14,6 +14,7 @@ import { Notice, Section, Segmented, TopBar, toast } from '../components/ui';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { Cues, FixCard, TutorialPhases } from '../components/Technique';
 import { ChartCard } from '../components/Charts';
+import { MediaHero } from '../components/MediaHero';
 import { NotFound } from './Program';
 
 export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) {
@@ -77,43 +78,16 @@ export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) 
         ))}
       </div>
 
-      {/* 3–6 Video */}
+      {/* 3–6 Video: technical scene first */}
       <div style={{ marginTop: 16 }}>
-        <VideoPlayer video={video} label={`${ex.name} — ${mode === 'demo' ? 'dimostrazione' : 'tutorial'}`} />
+        <MediaHero exerciseId={id} />
       </div>
-      <div style={{ marginTop: 10 }}>
-        <Segmented
-          label="Tipo di video"
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: 'demo', label: 'Dimostrazione' },
-            { value: 'tutorial', label: 'Tutorial completo' },
-          ]}
-        />
-      </div>
-      {video && <VideoMeta video={video} />}
-      {video && <VideoReview youtubeId={video.youtubeId} />}
-      {vids?.missing.map((m) => (
-        <div key={m} style={{ marginTop: 10 }}>
-          <Notice>{m}</Notice>
-        </div>
-      ))}
       {ex.variantNote && (
         <div style={{ marginTop: 10 }}>
           <Notice>
             <b>Variante da confermare.</b> {ex.variantNote}
           </Notice>
         </div>
-      )}
-
-      {mode === 'tutorial' && (
-        <Section title="Tutorial guidato">
-          <p className="small text-2" style={{ marginBottom: 10 }}>
-            Il video è incorporato senza modifiche (licenza YouTube). Errori e correzioni sono illustrati qui, in rosso e in verde, specifici per questo esercizio.
-          </p>
-          <TutorialPhases ex={ex} />
-        </Section>
       )}
 
       {/* 7–9 Prescription, last load, rest timer */}
@@ -228,6 +202,10 @@ export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) 
         </div>
       </Section>
 
+      <Section title="Guida passo per passo">
+        <TutorialPhases ex={ex} />
+      </Section>
+
       {/* 13 Alternatives */}
       <Section title="Alternative">
         <div className="stack" style={{ gap: 8 }}>
@@ -253,6 +231,40 @@ export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) 
         <p className="tiny muted" style={{ marginTop: 6 }}>
           Salvate automaticamente su questo dispositivo.
         </p>
+      </Section>
+
+      {/* External references (embed only, not editable) */}
+      <Section title="Fonti esterne">
+        <details className="card tight flat disclosure">
+          <summary className="row between">
+            <span className="small" style={{ fontWeight: 650 }}>
+              Video YouTube di riferimento ({[vids?.demo, vids?.tutorial].filter(Boolean).length})
+            </span>
+            <span className="small muted">apri</span>
+          </summary>
+          <p className="tiny muted" style={{ margin: '8px 0' }}>
+            Contenuti di terzi, solo incorporabili e spesso parlati: restano come riferimento secondario. Richiedono la connessione.
+          </p>
+          <Segmented
+            label="Video esterno"
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'demo', label: 'Breve' },
+              { value: 'tutorial', label: 'Tutorial' },
+            ]}
+          />
+          <div style={{ marginTop: 10 }}>
+            <VideoPlayer video={video} label={`${ex.name} — fonte esterna`} />
+          </div>
+          {video && <VideoMeta video={video} />}
+          {video && <VideoReview youtubeId={video.youtubeId} />}
+          {vids?.missing.map((m) => (
+            <div key={m} style={{ marginTop: 10 }}>
+              <Notice>{m}</Notice>
+            </div>
+          ))}
+        </details>
       </Section>
 
       {/* 15 History */}

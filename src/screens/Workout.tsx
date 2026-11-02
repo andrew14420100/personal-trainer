@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Flag, List, Minus, PlayCircle, Plus, X, TrendingUp, Timer as TimerIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Flag, List, Minus, PlayCircle, Plus, X, TrendingUp, Timer as TimerIcon } from 'lucide-react';
 import { useData } from '../app/store';
 import { DAY_BY_ID, SLOTS } from '../data/program';
 import { EXERCISE_BY_ID } from '../data/exercises';
-import { VIDEOS_BY_EXERCISE } from '../data/videos';
 import type { ExerciseLog, Session, SetLog, Technique } from '../lib/db';
 import { addSet, discardSession, finishSession, mutate, removeSet, updateSet } from '../lib/workout';
 import { doneSets, lastLog } from '../lib/stats';
@@ -13,8 +12,7 @@ import { formatClock, timer, unlockAudio } from '../lib/timer';
 import { setKeepAwake } from '../lib/wakelock';
 import { navigate } from '../lib/router';
 import { ConfirmSheet, Empty, Notice, Sheet, toast } from '../components/ui';
-import { VideoPlayer } from '../components/VideoPlayer';
-import { Cues } from '../components/Technique';
+import { MediaHero } from '../components/MediaHero';
 import { TimerPill } from '../components/Shell';
 import { num } from '../lib/format';
 
@@ -67,14 +65,13 @@ function ActiveWorkout({ session: s, elapsed }: { session: Session; elapsed: num
   const rest = data.settings.restOverrides[ex.id] ?? ex.restSec;
   const prev = lastLog(data.sessions, ex.id, s.id);
   const hint = progressionHint(ex, { repsMin: log.repsMin, repsMax: log.repsMax, sets: log.targetSets }, prev?.log ?? null);
-  const [showVideo, setShowVideo] = useState(false);
+  const [showVideo, setShowVideo] = useState(true);
   const [list, setList] = useState(false);
   const [exit, setExit] = useState(false);
   const [discard, setDiscard] = useState(false);
   const [finish, setFinish] = useState(false);
   const isLast = idx === s.exercises.length - 1;
 
-  useEffect(() => setShowVideo(false), [idx]);
 
   const go = (i: number) => mutate(s.id, (x) => ({ ...x, currentIndex: Math.max(0, Math.min(x.exercises.length - 1, i)) })).then(() => window.scrollTo({ top: 0 }));
 
@@ -161,6 +158,17 @@ function ActiveWorkout({ session: s, elapsed }: { session: Session; elapsed: num
           ))}
         </div>
 
+        {/* Technical demo: visible immediately, silent and looping */}
+        <div style={{ marginTop: 12 }}>
+          {showVideo && <MediaHero exerciseId={ex.id} compact />}
+          <button className="link" style={{ marginTop: 4 }} onClick={() => setShowVideo((v) => !v)} aria-expanded={showVideo}>
+            {showVideo ? 'Nascondi dimostrazione' : 'Mostra dimostrazione'}
+          </button>
+          <button className="link" style={{ marginTop: 4, marginLeft: 14 }} onClick={() => navigate(`/esercizio/${ex.id}?slot=${log.slotId}`)}>
+            Errori e correzioni
+          </button>
+        </div>
+
         {/* Previous session */}
         <div className="card tight flat" style={{ marginTop: 12 }}>
           <div className="row between">
@@ -189,22 +197,6 @@ function ActiveWorkout({ session: s, elapsed }: { session: Session; elapsed: num
             </span>
           </div>
         </div>
-
-        {/* Video */}
-        <button className="btn block ghost" style={{ marginTop: 10, justifyContent: 'space-between' }} onClick={() => setShowVideo((v) => !v)} aria-expanded={showVideo}>
-          <span className="row">
-            <PlayCircle size={18} /> Guarda la dimostrazione
-          </span>
-          <ChevronDown size={18} style={{ transform: showVideo ? 'rotate(180deg)' : undefined, transition: 'transform .25s' }} />
-        </button>
-        {showVideo && (
-          <div style={{ marginTop: 10 }}>
-            <VideoPlayer video={VIDEOS_BY_EXERCISE[ex.id]?.demo} label={ex.name} autoLoad />
-            <div style={{ marginTop: 10 }}>
-              <Cues cues={ex.cues} />
-            </div>
-          </div>
-        )}
 
         {/* Sets */}
         <div className="set-cap" style={{ marginTop: 18 }}>

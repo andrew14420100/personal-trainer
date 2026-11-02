@@ -4,7 +4,7 @@ import { useData } from '../app/store';
 import { DAYS, DAY_BY_ID, dayForWeekday, nextScheduledDay } from '../data/program';
 import { EXERCISE_BY_ID } from '../data/exercises';
 import { effectiveDay, estimateMinutes, CALIBRATION_SESSIONS } from '../lib/plan';
-import { completed, exerciseHistory, isoDate, sessionVolume, weekOverWeek, weekStart } from '../lib/stats';
+import { completed, exerciseHistory, isoDate, sessionDurationMin, sessionVolume, weekOverWeek, weekStart } from '../lib/stats';
 import { fullDate, greeting, num, relativeDays, shortDate, volume } from '../lib/format';
 import { navigate } from '../lib/router';
 import { startSession } from '../lib/workout';
@@ -211,8 +211,39 @@ function WeekStrip() {
   const doneDays = new Map<string, DayId>();
   completed(sessions).forEach((s) => doneDays.set(isoDate(new Date(s.startedAt)), s.dayId));
   const labels = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+  const weekDone = completed(sessions).filter((s) => weekStart(s.startedAt) === weekStart(now));
+  const planned = DAYS.length;
+  const pct = Math.min(1, weekDone.length / planned);
+  const minutes = weekDone.reduce((a, s) => a + sessionDurationMin(s), 0);
+  const vol = weekDone.reduce((a, s) => a + sessionVolume(s), 0);
   return (
-    <Section title="Questa settimana" action={<button className="link" onClick={() => navigate('/progressi?tab=calendario')}>Calendario</button>}>
+    <Section title="Questa settimana" action={<button className="link" onClick={() => navigate('/calendario')}>Calendario</button>}>
+      <div className="card tight row" style={{ gap: 16, marginBottom: 10 }}>
+        <svg width="76" height="76" viewBox="0 0 76 76" role="img" aria-label={`${weekDone.length} allenamenti su ${planned} programmati`}>
+          <circle cx="38" cy="38" r="31" fill="none" stroke="var(--surface-3)" strokeWidth="8" />
+          <circle
+            cx="38"
+            cy="38"
+            r="31"
+            fill="none"
+            stroke="var(--action)"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 31 * pct} ${2 * Math.PI * 31}`}
+            transform="rotate(-90 38 38)"
+            style={{ transition: 'stroke-dasharray .8s var(--ease)' }}
+          />
+          <text x="38" y="44" textAnchor="middle" fill="var(--text)" style={{ font: '800 19px var(--display)' }}>
+            {weekDone.length}/{planned}
+          </text>
+        </svg>
+        <div className="grow">
+          <div style={{ fontWeight: 750 }}>{weekDone.length >= planned ? 'Settimana completata' : weekDone.length ? 'Settimana in corso' : 'Settimana da iniziare'}</div>
+          <div className="small text-2" style={{ marginTop: 4 }}>
+            {weekDone.length ? `${minutes} min · ${volume(vol)} di volume` : 'Nessuna seduta registrata in questa settimana.'}
+          </div>
+        </div>
+      </div>
       <div className="week" role="list">
         {labels.map((l, i) => {
           const d = new Date(start);

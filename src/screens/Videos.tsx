@@ -1,107 +1,106 @@
-import { CheckCircle2, ExternalLink, AlertTriangle, Film, XCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Film, Play } from 'lucide-react';
+import { ANIMATIONS, ANIMATION_BY_EXERCISE } from '../anim/library';
+import { listMediaIds } from '../lib/db';
 import { useData } from '../app/store';
 import { EXERCISES, EXERCISE_BY_ID } from '../data/exercises';
 import { SLOTS } from '../data/program';
-import { VIDEO_CHECK, VIDEO_LIBRARY, allVideoIds, youtubeThumb, youtubeWatchUrl, type VideoSource } from '../data/videos';
+import { VIDEO_CHECK, VIDEO_LIBRARY, allVideoIds, youtubeWatchUrl, type VideoSource } from '../data/videos';
 import { navigate } from '../lib/router';
-import { Notice, Section } from '../components/ui';
+import { Notice, Section, TopBar } from '../components/ui';
 
 export function Videos() {
   const { settings } = useData();
   const ids = allVideoIds();
   const approved = ids.filter((id) => settings.videoReviews[id]?.status === 'approvato').length;
-  const rejected = ids.filter((id) => settings.videoReviews[id]?.status === 'non adatto').length;
-  const withBoth = VIDEO_LIBRARY.filter((v) => v.demo && v.tutorial).length;
-  const missingItems = VIDEO_LIBRARY.flatMap((v) => v.missing.map((m) => ({ id: v.exerciseId, m })));
-  const partial = VIDEO_LIBRARY.flatMap((v) => [v.demo, v.tutorial].filter((x): x is VideoSource => !!x && x.match !== 'esatto').map((x) => ({ id: v.exerciseId, x })));
+  const [own, setOwn] = useState<string[]>([]);
+  useEffect(() => {
+    listMediaIds()
+      .then(setOwn)
+      .catch(() => setOwn([]));
+  }, []);
+  const ownQuick = EXERCISES.filter((e) => own.includes(`${e.id}:quick`)).length;
+  const ownErr = EXERCISES.filter((e) => own.includes(`${e.id}:errors`)).length;
+  const animErrors = ANIMATIONS.reduce((a, x) => a + x.errors.length, 0);
 
   return (
     <main className="screen">
-      <div className="brandbar">
-        <div className="brand">
-          FORMA<b>·</b>LAB
-        </div>
-      </div>
-      <h1 className="display h1" style={{ marginTop: 12 }}>
-        Videoteca
-      </h1>
+      <TopBar title="Videoteca" fallback="/scheda" />
+      <h1 className="display h1">Videoteca</h1>
       <p className="text-2" style={{ marginTop: 8 }}>
-        Due modalità per ognuno dei {EXERCISES.length} esercizi ({SLOTS.length} posizioni): dimostrazione rapida e tutorial completo.
+        Stato reale dei contenuti per i {EXERCISES.length} esercizi ({SLOTS.length} posizioni della scheda).
       </p>
 
       <div className="stat-grid" style={{ marginTop: 16 }}>
         <div className="stat">
-          <div className="stat-label">Video collegati</div>
-          <div className="stat-value">{ids.length}</div>
-          <div className="stat-sub">link verificati il {VIDEO_CHECK.date}</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">Esercizi con demo + tutorial</div>
-          <div className="stat-value">
-            {withBoth}/{EXERCISES.length}
-          </div>
-          <div className="stat-sub">{missingItems.length} lacune segnalate</div>
-        </div>
-        <div className="stat">
-          <div className="stat-label">Approvati da te</div>
+          <div className="stat-label">Animazioni tecniche</div>
           <div className="stat-value" style={{ color: 'var(--right)' }}>
-            {approved}
+            {ANIMATIONS.length}/{EXERCISES.length}
           </div>
-          <div className="stat-sub">{rejected} segnati non adatti</div>
+          <div className="stat-sub">{animErrors} errori animati ✕ → ✓ · offline</div>
         </div>
         <div className="stat">
-          <div className="stat-label">Varianti non identiche</div>
-          <div className="stat-value" style={{ color: 'var(--progress)' }}>
-            {partial.length}
+          <div className="stat-label">Video reali annotati</div>
+          <div className="stat-value" style={{ color: ownQuick + ownErr ? 'var(--data)' : 'var(--progress)' }}>
+            {ownQuick + ownErr}/{EXERCISES.length * 2}
           </div>
-          <div className="stat-sub">segnalate nella scheda</div>
+          <div className="stat-sub">registrati da te · {ownQuick} demo, {ownErr} errori</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Riferimenti YouTube</div>
+          <div className="stat-value">{ids.length}</div>
+          <div className="stat-sub">solo link esterni · {approved} approvati da te</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Video reali di terzi modificabili</div>
+          <div className="stat-value" style={{ color: 'var(--progress)' }}>0</div>
+          <div className="stat-sub">nessuna licenza compatibile trovata</div>
         </div>
       </div>
 
       <div style={{ marginTop: 14 }}>
         <Notice kind="info">
-          <b>Cosa significa “link verificato”.</b> Ogni video esiste ed è incorporabile (controllo tramite oEmbed di YouTube). Titolo, canale e durata confermano l’esercizio, ma nessun professionista ha
-          revisionato ogni secondo dei filmati: guardali e segna <i>Approva</i> o <i>Non adatto</i> nella pagina dell’esercizio. Licenza: {VIDEO_CHECK.license}
+          <b>Come sono fatti i video.</b> Ogni esercizio ha un’animazione tecnica originale (manichino con cinematica reale, ✕ rosse e ✓ verdi sul movimento, loop silenzioso). I video di atleti reali con
+          le stesse annotazioni si creano registrando con l’iPhone e annotando nell’app: non esistono filmati gratuiti di queste macchine con licenza che permetta di modificarli. I video YouTube restano solo
+          come fonte esterna. Le animazioni sono schematiche: falle validare da un professionista per i casi delicati.
         </Notice>
       </div>
 
-      <Section title="Libreria per esercizio">
-        <div className="stack" style={{ gap: 10 }}>
-          {VIDEO_LIBRARY.map((v) => {
-            const ex = EXERCISE_BY_ID[v.exerciseId];
+      <Section title="Stato per esercizio">
+        <div className="stack" style={{ gap: 8 }}>
+          {EXERCISES.map((ex) => {
+            const a = ANIMATION_BY_EXERCISE[ex.id];
+            const q = own.includes(`${ex.id}:quick`);
+            const e = own.includes(`${ex.id}:errors`);
             return (
-              <div key={v.exerciseId} className="card tight flat">
-                <button className="row between tap-row" onClick={() => navigate(`/esercizio/${ex.id}`)}>
-                  <span className="ex-name">{ex.name}</span>
-                  <span className="small muted">apri</span>
-                </button>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 8, marginTop: 10 }}>
-                  {[v.demo, v.tutorial].map((x, i) => (
-                    <VideoTile key={i} v={x} label={i === 0 ? 'Dimostrazione' : 'Tutorial'} review={x ? settings.videoReviews[x.youtubeId]?.status : undefined} />
-                  ))}
+              <details key={ex.id} className="card tight flat disclosure">
+                <summary>
+                  <div className="row between">
+                    <b>{ex.name}</b>
+                    <span className="row" style={{ gap: 4 }}>
+                      <span className="chip ok">Anim. ✓</span>
+                      <span className={`chip ${q || e ? 'ok' : ''}`}>Reale {q || e ? `${(q ? 1 : 0) + (e ? 1 : 0)}/2` : '—'}</span>
+                    </span>
+                  </div>
+                </summary>
+                <div className="stack small" style={{ gap: 10, marginTop: 12 }}>
+                  <div className="row wrap" style={{ gap: 8 }}>
+                    <button className="btn sm primary" onClick={() => navigate(`/esercizio/${ex.id}`)}>
+                      <Play size={14} /> Apri l’esercizio
+                    </button>
+                  </div>
+                  <div className="text-2">
+                    <b style={{ color: 'var(--text)' }}>Animazione:</b> vista {a.view.toLowerCase()} · errori animati: {a.errors.map((x) => x.bad.toLowerCase()).join(' · ')}.
+                  </div>
+                  <Storyboard exerciseId={ex.id} />
                 </div>
-                {v.extra.length > 0 && (
-                  <div className="small text-2" style={{ marginTop: 8 }}>
-                    Approfondimenti:{' '}
-                    {v.extra.map((e) => (
-                      <a key={e.youtubeId} href={youtubeWatchUrl(e.youtubeId)} target="_blank" rel="noopener noreferrer" style={{ marginRight: 8 }}>
-                        {e.author} ({e.duration}) <ExternalLink size={11} />
-                      </a>
-                    ))}
-                  </div>
-                )}
-                {v.missing.map((m) => (
-                  <div key={m} className="small" style={{ marginTop: 8, color: 'var(--progress)' }}>
-                    <AlertTriangle size={13} style={{ verticalAlign: '-2px' }} /> {m}
-                  </div>
-                ))}
-              </div>
+              </details>
             );
           })}
         </div>
       </Section>
 
-      <Section title="Schede di verifica">
+      <Section title="Riferimenti esterni (YouTube) · schede di verifica">
         <p className="small text-2" style={{ marginBottom: 10 }}>
           Fonte, autore, URL, tipo, licenza, corrispondenza, errori/correzioni, compatibilità iPhone e stato per ogni video.
         </p>
@@ -151,62 +150,39 @@ export function Videos() {
         </div>
       </Section>
 
-      <Section title="Contenuti da produrre">
-        <div className="card tight flat stack" style={{ gap: 10 }}>
-          <div className="row" style={{ gap: 8, fontWeight: 700 }}>
-            <Film size={18} color="var(--progress)" /> Guida alle riprese originali
-          </div>
-          <p className="small text-2">
-            Per gli esercizi segnalati sopra (tutorial non specifico per la variante, macchina diversa da quella della tua palestra) la soluzione migliore è registrare un video tuo, di cui possiedi i
-            diritti: potrà essere annotato in rosso/verde e reso disponibile offline in una versione futura.
-          </p>
-          <ol className="steps small">
-            <li>iPhone in orizzontale su treppiede, a 2–3 m, all’altezza dell’anca; luce frontale, 1080p a 60 fps (o 240 fps per il rallentatore).</li>
-            <li>Angolazione: laterale per spinte, trazioni e cerniere d’anca; a 45° per split squat e alzate laterali; frontale per controllare le ginocchia.</li>
-            <li>Ripresa A (30–60 s): regolazione della macchina, posizione iniziale, 3–5 ripetizioni continue.</li>
-            <li>Ripresa B (2–4 min): regolazioni in primo piano, 2–3 errori comuni eseguiti a carico leggero, poi la correzione e una serie pulita senza interruzioni.</li>
-            <li>Esegui gli errori solo a carico minimo e senza dolore: servono a mostrarli, non ad allenarsi.</li>
-            <li>Verifica il regolamento della palestra e non riprendere altre persone senza il loro consenso.</li>
-          </ol>
-        </div>
-      </Section>
     </main>
   );
 }
 
-function VideoTile({ v, label, review }: { v?: VideoSource; label: string; review?: 'approvato' | 'non adatto' }) {
-  if (!v)
-    return (
-      <div className="ex-thumb" style={{ width: '100%', height: 'auto', aspectRatio: '16/9', display: 'grid', placeItems: 'center', padding: 8, textAlign: 'center' }}>
-        <span className="tiny" style={{ color: 'var(--progress)' }}>
-          {label}: mancante
-        </span>
-      </div>
-    );
+/** Shot list to record an original real-athlete video in the reference style (no voice, ✕/✓). */
+function Storyboard({ exerciseId }: { exerciseId: string }) {
+  const ex = EXERCISE_BY_ID[exerciseId];
+  const a = ANIMATION_BY_EXERCISE[exerciseId];
+  const angle = a.front ? 'frontale, a 2–3 m, all’altezza del petto' : 'laterale (profilo), a 2–3 m, all’altezza dell’anca';
   return (
-    <a href={youtubeWatchUrl(v.youtubeId)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }} aria-label={`${label}: ${v.title} (apre YouTube)`}>
-      <div className="ex-thumb" style={{ width: '100%', height: 'auto', aspectRatio: '16/9' }}>
-        <img src={youtubeThumb(v.youtubeId)} alt="" loading="lazy" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />
-        <span className="n" style={{ fontSize: 11, letterSpacing: '.06em', textTransform: 'uppercase' }}>
-          {label}
-        </span>
-        <span className="tiny" style={{ position: 'absolute', right: 6, bottom: 4, color: '#fff', textShadow: '0 1px 4px #000' }}>
-          {v.duration}
-        </span>
-        {review && (
-          <span style={{ position: 'absolute', right: 5, top: 4 }}>
-            {review === 'approvato' ? <CheckCircle2 size={16} color="var(--right)" /> : <XCircle size={16} color="var(--wrong)" />}
-          </span>
-        )}
+    <div className="card tight" style={{ background: 'var(--bg-2)' }}>
+      <div className="row" style={{ gap: 6, fontWeight: 700 }}>
+        <Film size={15} color="var(--progress)" /> Storyboard per il video reale
       </div>
-      <div className="tiny text-2" style={{ marginTop: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {v.author}
-      </div>
-      {v.match !== 'esatto' && (
-        <div className="tiny" style={{ color: 'var(--progress)' }}>
-          {v.match}
-        </div>
-      )}
-    </a>
+      <ol className="steps small" style={{ marginTop: 8 }}>
+        <li>
+          <b>A · Posizione iniziale (3–4 s).</b> Inquadratura {angle}, verticale 9:16. Regolazione: {ex.setup[0].toLowerCase()}
+        </li>
+        {a.errors.map((e, i) => (
+          <li key={e.id}>
+            <b>
+              B{i + 1} · ✕ {e.bad} (2 ripetizioni, carico leggero).
+            </b>{' '}
+            Poi C{i + 1} · ✓ {e.good}: {ex.errors.find((x) => x.id === e.id)?.fix ?? ''}
+          </li>
+        ))}
+        <li>
+          <b>D · Esecuzione completa (3–4 ripetizioni).</b> Inquadratura intera, ritmo controllato, nessuna voce.
+        </li>
+      </ol>
+      <p className="tiny muted" style={{ marginTop: 6 }}>
+        Registra senza audio parlato, a carico ridotto per gli errori. Poi apri l’esercizio → “Aggiungi il tuo video” → Annota: ✕ e ✓ nei momenti indicati, linee sulle zone ({a.errors.length} errori).
+      </p>
+    </div>
   );
 }

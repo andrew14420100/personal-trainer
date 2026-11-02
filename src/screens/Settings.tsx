@@ -85,6 +85,56 @@ export function Settings() {
         </div>
       </Section>
 
+      <Section title="Video e animazioni">
+        <div className="card tight flat">
+          <div className="setting-row" style={{ paddingTop: 0 }}>
+            <div className="grow">
+              <div style={{ fontWeight: 600 }}>Avvio automatico</div>
+              <div className="small muted">Le dimostrazioni partono da sole, senza audio, e si ripetono in loop</div>
+            </div>
+            <Switch checked={settings.video.autoplay} onChange={(v) => set('video', { ...settings.video, autoplay: v })} label="Avvio automatico video" />
+          </div>
+          <div className="setting-row">
+            <div className="grow">
+              <div style={{ fontWeight: 600 }}>Didascalie ✕ / ✓</div>
+              <div className="small muted">Etichette di fase e descrizione dell’errore sul video</div>
+            </div>
+            <Switch checked={settings.video.labels} onChange={(v) => set('video', { ...settings.video, labels: v })} label="Didascalie sul video" />
+          </div>
+          <div className="label" style={{ marginTop: 12 }}>
+            Modalità iniziale nella pagina esercizio
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <Segmented
+              label="Modalità iniziale"
+              value={settings.video.defaultMode}
+              onChange={(v) => set('video', { ...settings.video, defaultMode: v })}
+              options={[
+                { value: 'quick', label: 'Dimostrazione' },
+                { value: 'errors', label: 'Errori e correzioni' },
+              ]}
+            />
+          </div>
+          <div className="label" style={{ marginTop: 12 }}>
+            Velocità predefinita
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <Segmented
+              label="Velocità"
+              value={String(settings.video.speed) as '1' | '0.5'}
+              onChange={(v) => set('video', { ...settings.video, speed: Number(v) })}
+              options={[
+                { value: '1', label: 'Normale' },
+                { value: '0.5', label: 'Rallentata ½×' },
+              ]}
+            />
+          </div>
+          <p className="tiny muted" style={{ marginTop: 10 }}>
+            I video non hanno audio. Notifiche: iOS non consente a un’app web di inviare notifiche locali a fine recupero; il segnale suona solo con l’app aperta.
+          </p>
+        </div>
+      </Section>
+
       <PlanEditor />
 
       <Section title="I tuoi dati">

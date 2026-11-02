@@ -5,7 +5,7 @@
 import type { DayId } from '../data/types';
 
 export const DB_NAME = 'forma-lab';
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 export interface SetLog {
   /** kg; null when not entered. For body-weight exercises it is the extra load (0 = body weight only). */
@@ -64,7 +64,7 @@ export interface KV<T = unknown> {
   value: T;
 }
 
-type StoreName = 'sessions' | 'measurements' | 'kv';
+type StoreName = 'sessions' | 'measurements' | 'kv' | 'media';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 const listeners = new Set<() => void>();
@@ -108,6 +108,8 @@ export function openDb(): Promise<IDBDatabase> {
         db.createObjectStore('measurements', { keyPath: 'id' }).createIndex('date', 'date');
       }
       if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv', { keyPath: 'key' });
+      // v2: the user's own exercise videos (Blob) with their red/green annotations
+      if (!db.objectStoreNames.contains('media')) db.createObjectStore('media', { keyPath: 'id' });
     };
     req.onsuccess = () => {
       const db = req.result;
@@ -242,10 +244,11 @@ export async function restore(data: Snapshot, mode: 'replace' | 'merge'): Promis
 export async function wipeAll(): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
-    const t = db.transaction(['sessions', 'measurements', 'kv'], 'readwrite');
+    const t = db.transaction(['sessions', 'measurements', 'kv', 'media'], 'readwrite');
     t.objectStore('sessions').clear();
     t.objectStore('measurements').clear();
     t.objectStore('kv').clear();
+    t.objectStore('media').clear();
     t.oncomplete = () => resolve();
     t.onerror = () => reject(t.error);
   });
@@ -266,3 +269,46 @@ export function uid(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
+
+// ── User videos (own footage, annotated in the app) ─────────────────────────
+
+export interface Shape {
+  type: 'line' | 'circle' | 'arrow';
+  /** Normalised coordinates (0–1) relative to the video frame. */
+  p: [number, number][];
+}
+
+export interface Marker {
+  id: string;
+  /** Start time in seconds. */
+  t: number;
+  /** Duration in seconds. */
+  dur: number;
+  kind: 'bad' | 'good';
+  label: string;
+  shapes: Shape[];
+}
+
+export interface MediaItem {
+  id: string; // `${exerciseId}:${kind}`
+  exerciseId: string;
+  kind: 'quick' | 'errors';
+  blob: Blob;
+  type: string;
+  createdAt: number;
+  markers: Marker[];
+}
+
+export async function getMedia(id: string): Promise<MediaItem | undefined> {
+  const db = await openDb();
+  return reqToPromise(db.transaction('media').objectStore('media').get(id) as IDBRequest<MediaItem | undefined>);
+}
+
+/** Metadata only (no blobs) is not possible with a plain getAll, so list ids via keys. */
+export async function listMediaIds(): Promise<string[]> {
+  const db = await openDb();
+  return reqToPromise(db.transaction('media').objectStore('media').getAllKeys() as IDBRequest<string[]>);
+}
+
+export const saveMedia = (m: MediaItem) => put('media', m);
+export const deleteMedia = (id: string) => del('media', id);
