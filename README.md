@@ -4,8 +4,8 @@ Applicazione personale di allenamento per iPhone: PWA installabile dalla scherma
 
 | | |
 |---|---|
-| **Scheda** | 4 giorni (Lun Upper A · Mar Lower A · Gio Upper B · Ven Lower B), 26 posizioni, 25 esercizi distinti |
-| **Video** | Animazioni tecniche originali per tutti i 25 esercizi (❌ rosso → ✅ verde sul movimento, loop silenzioso, offline) + i tuoi video reali annotabili nell’app; 57 video YouTube verificati come fonte esterna secondaria — vedi [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) |
+| **Scheda** | 4 giorni con nomi chiari: G1 Petto, schiena e braccia (Upper A) · G2 Gambe: quadricipiti e femorali (Lower A) · G3 Petto alto, schiena e spalle (Upper B) · G4 Glutei e gambe (Lower B) — 26 posizioni, 25 esercizi, mappa anatomica per giornata ed esercizio |
+| **Video** | Video brevi di atleti reali (YouTube Shorts) per tutti i 25 esercizi, quasi tutti con ❌/✅ sul video, avvio muto e in loop — [docs/VIDEO_REALI.md](docs/VIDEO_REALI.md). In più: i tuoi video annotabili, schemi tecnici animati (non sono video), tutorial esterni |
 | **Tecnica** | Pagina completa per ogni esercizio: preparazione, esecuzione, respirazione, errori in ROSSO → correzioni in VERDE, alternative |
 | **Allenamento** | Un esercizio alla volta, carichi/ripetizioni/RIR/tecnica/note, timer di recupero automatico, riepilogo con confronti |
 | **Progressi** | Storico, grafici interattivi, calendario, confronti settimanali, misure corporee, suggerimenti di progressione |
@@ -33,9 +33,10 @@ Apre l’app in sviluppo su `http://localhost:5173` (senza autenticazione: il mi
 | Comando | Cosa fa |
 |---|---|
 | `npm run build` | Type-check + build di produzione in `dist/` (PWA con service worker) |
-| `npm test` | 51 test unitari (scheda vs brief, animazioni, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
+| `npm test` | 57 test unitari (scheda vs brief, animazioni, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
 | `npm run test:e2e` | Test end-to-end Playwright sulla build (viewport iPhone 14 Pro, iPhone SE, desktop; offline; backup) |
-| `npm run verify:videos` | Riverifica tutti i video via oEmbed e rigenera `docs/VERIFICA_VIDEO.md` |
+| `npm run verify:videos` | Riverifica i tutorial esterni e rigenera `docs/VERIFICA_VIDEO.md` |
+| `npx vite-node scripts/verify-real-videos.ts` | Riverifica i video reali e rigenera `docs/VIDEO_REALI.md` |
 | `npm run totp:new` | Genera passphrase, segreto TOTP e chiave di sessione per l’accesso privato |
 | `npm run build:preview` | Build a file singolo per l’anteprima in Claude (`dist-preview/`) |
 | `npm run deploy` | Build + pubblicazione su Cloudflare Pages con Wrangler |
@@ -70,7 +71,8 @@ docs/           analisi, pubblicazione, privacy, verifica video, rapporto test, 
 - [docs/DESIGN.md](docs/DESIGN.md) — design system “cinematic”
 - [docs/PUBBLICAZIONE.md](docs/PUBBLICAZIONE.md) — pubblicazione privata su HTTPS e installazione su iPhone, passo per passo
 - [docs/PRIVACY.md](docs/PRIVACY.md) — dove sono i dati, accesso, backup
-- [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) — analisi dei video di riferimento, fonti, animazioni, video personali
+- [docs/VIDEO_REALI.md](docs/VIDEO_REALI.md) — video reali scelti per ogni esercizio, con scheda di verifica
+- [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) — analisi dei video di riferimento, schemi animati, video personali
 - [docs/VERIFICA_VIDEO.md](docs/VERIFICA_VIDEO.md) — scheda di verifica dei riferimenti YouTube
 - [docs/RAPPORTO_TEST.md](docs/RAPPORTO_TEST.md) — verifiche superate, fallite (e corrette) e non eseguibili
 

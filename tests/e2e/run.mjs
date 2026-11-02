@@ -77,8 +77,9 @@ async function run(deviceName, label, full) {
 
   // Program: 4 days, 26 positions
   await page.getByRole('button', { name: 'Allenamenti', exact: true }).click();
-  await page.waitForSelector('.day-card');
-  check(`[${label}] program shows 4 days`, (await page.locator('.day-card').count()) === 4);
+  await page.waitForSelector('.dcard');
+  check(`[${label}] program shows 4 day cards with clear names`, (await page.locator('.dcard').count()) === 4 && (await page.getByText('Petto, schiena e braccia').count()) >= 1);
+  check(`[${label}] day cards show anatomy and start button`, (await page.locator('.dcard .anatomy').count()) === 4 && (await page.locator('.dcard').getByRole('button', { name: /Inizia allenamento/ }).count()) >= 3);
   await page.screenshot({ path: join(shots, `${label}-02-program.png`), fullPage: true });
   let total = 0;
   for (const d of ['upper-a', 'lower-a', 'upper-b', 'lower-b']) {
@@ -91,36 +92,43 @@ async function run(deviceName, label, full) {
   check(`[${label}] 26 exercise positions across the 4 days`, total === 26, `found ${total}`);
   await layoutChecks(page, `${label} day`);
 
-  // Exercise page: technical animation first (video-first layout)
+  // Exercise page: name — group, quick facts, anatomy, real video first
+  await page.goto(`${BASE}/#/esercizio/lat-pulldown-wide?slot=upper-a-2`);
+  await page.waitForSelector('.ex-facts');
+  check(`[${label}] exercise header shows name and muscle group`, (await page.locator('h1').innerText()).toUpperCase().includes('SCHIENA'));
+  check(`[${label}] quick facts: main muscle, sets, reps, rest`, (await page.locator('.ex-facts').innerText()).includes('Gran dorsale') && (await page.locator('.ex-fact-n').count()) === 3);
+  check(`[${label}] anatomy map highlights primary muscles`, (await page.locator('.ex-facts .mus.p').count()) >= 2);
+  check(`[${label}] real athlete video is the primary media (vertical player)`, (await page.locator('.player.vertical').count()) === 1);
+  await page.waitForSelector('.player-msg >> text=Apri su YouTube', { timeout: 20000 });
+  check(`[${label}] blocked real video offers the verified original link`, (await page.locator('a[href^="https://www.youtube.com/watch?v=6zw-Tfh6_8E"]').count()) >= 1);
   await page.goto(`${BASE}/#/esercizio/chest-press?slot=upper-a-1`);
-  await page.waitForSelector('.anim-stage canvas');
-  const px = async () => page.locator('.anim-stage canvas').first().evaluate((c) => c.toDataURL().length + ':' + c.toDataURL().slice(5000, 5200));
-  const f1 = await px();
-  await page.waitForTimeout(900);
-  const f2 = await px();
-  check(`[${label}] technical animation plays automatically (frames change)`, f1 !== f2);
+  await page.waitForSelector('.ex-facts');
   const sections = await page.locator('.section-title').allInnerTexts();
   check(`[${label}] exercise sections in order`, ['PRESCRIZIONE', 'TECNICA', 'ERRORI E CORREZIONI', 'ALTERNATIVE', 'NOTE PERSONALI', 'STORICO PRESTAZIONI'].every((s, i, a) => sections.map((x) => x.toUpperCase()).indexOf(s) >= (i ? sections.map((x) => x.toUpperCase()).indexOf(a[i - 1]) : 0)), sections.join(' > '));
-  await page.getByRole('tab', { name: 'Errori e correzioni' }).click();
-  await page.waitForSelector('.anim-chip.bad');
-  check(`[${label}] errors mode lists the faults (✕ chips)`, (await page.locator('.anim-chip.bad').count()) >= 2);
-  await page.locator('.anim-chip.bad').first().click();
-  await page.waitForTimeout(400);
+  // technical diagram is still available (labelled as diagram, not video)
+  await page.getByRole('tab', { name: 'Schema' }).click();
+  await page.waitForSelector('.anim-stage canvas');
+  await page.locator('.anim-stage').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await page.waitForTimeout(300);
+  const px = async () => page.locator('.anim-stage canvas').first().evaluate((c) => c.toDataURL().length + ':' + c.toDataURL().slice(5000, 5200));
+  const f1 = await px();
+  await page.waitForTimeout(2600); // the sequence opens with a 1.8 s still "starting position"
+  check(`[${label}] technical diagram animates`, f1 !== (await px()));
+  check(`[${label}] diagram lists the faults (✕ chips)`, (await page.locator('.anim-chip.bad').count()) >= 2);
   await page.screenshot({ path: join(shots, `${label}-04-exercise.png`), fullPage: false });
   check(`[${label}] guided tutorial shows 5 phases`, (await page.locator('.phase-btn').count()) === 5);
   await page.getByRole('tab', { name: /Errori/ }).last().click();
   check(`[${label}] errors phase shows RED cards`, (await page.locator('.phases ~ .card .fix-side.wrong').count()) >= 3);
   await page.locator('.fix-card .btn', { hasText: 'Correggi' }).first().click();
   check(`[${label}] correction shows GREEN`, (await page.locator('.fix-side.right').count()) >= 1);
-  // External YouTube reference is secondary and never a stuck player
+  // External tutorial (talking) stays secondary and never a stuck player
   await page.locator('details.disclosure summary', { hasText: 'Video YouTube di riferimento' }).click();
-  await page.locator('.player-facade').click();
-  await page.waitForSelector('.player-msg >> text=Apri su YouTube', { timeout: 20000 });
-  check(`[${label}] blocked external video shows link to original source`, (await page.locator('a[href^="https://www.youtube.com/watch?v=sqNwDkUU_Ps"]').count()) >= 1);
+  await page.locator('details .player-facade').click();
+  await page.waitForSelector('details .player-msg >> text=Apri su YouTube', { timeout: 20000 });
+  check(`[${label}] external tutorial falls back to original link`, (await page.locator('a[href^="https://www.youtube.com/watch?v=sqNwDkUU_Ps"]').count()) >= 1);
   await layoutChecks(page, `${label} exercise`);
   // Own footage: import, muted inline looping playback, red/green annotation, persistence
-  await page.getByRole('tab', { name: 'Dimostrazione' }).click();
-  await page.getByRole('button', { name: /Aggiungi il tuo video/ }).click();
+  await page.getByRole('tab', { name: 'Tuo' }).click();
   await page.locator('input[type=file][accept="video/*"]').first().setInputFiles(join(root, 'tests/e2e/sample-athlete.mp4'));
   await page.waitForSelector('.uv-stage video', { timeout: 10000 });
   await page.waitForTimeout(1500);
@@ -137,6 +145,7 @@ async function run(deviceName, label, full) {
   check(`[${label}] red annotation drawn on own video`, (await page.locator('.uv-overlay line[stroke="#ff3b47"]').count()) >= 1 && (await page.locator('.uv-badge.bad').count()) >= 1);
   await page.screenshot({ path: join(shots, `${label}-04b-own-video.png`) });
   await page.reload();
+  await page.getByRole('tab', { name: 'Il tuo' }).click();
   await page.waitForSelector('.uv-stage video', { timeout: 10000 });
   check(`[${label}] own video and annotations persist after reload`, (await page.locator('.uv-stage video').count()) === 1);
   // Favorite + note persist
@@ -146,10 +155,10 @@ async function run(deviceName, label, full) {
 
   // Workout
   await page.goto(`${BASE}/#/giorno/upper-a`);
-  await page.getByRole('button', { name: /Inizia Upper A/ }).click();
+  await page.getByRole('button', { name: /Inizia allenamento/ }).first().click();
   await page.waitForSelector('.set-row');
   check(`[${label}] workout mode opened`, await page.getByText('Esercizio 1 di 7').isVisible());
-  check(`[${label}] workout shows the demo (animation or own video)`, (await page.locator('.anim-stage canvas, .uv-stage video').count()) === 1);
+  check(`[${label}] workout shows the demo video`, (await page.locator('.player.vertical, .anim-stage canvas, .uv-stage video').count()) === 1);
   const exCount = 7;
   for (let e = 0; e < exCount; e++) {
     const rows = page.locator('.set-row');
@@ -262,8 +271,8 @@ async function run(deviceName, label, full) {
     await page.reload();
     await ctx.setOffline(true);
     await page.goto(BASE + '/#/scheda');
-    await page.waitForSelector('.day-card', { timeout: 10000 }).catch(() => {});
-    check(`[${label}] app opens offline (program)`, (await page.locator('.day-card').count()) === 4);
+    await page.waitForSelector('.dcard', { timeout: 10000 }).catch(() => {});
+    check(`[${label}] app opens offline (program)`, (await page.locator('.dcard').count()) === 4);
     await page.goto(BASE + '/#/esercizio/plank');
     check(`[${label}] textual instructions offline`, await page.getByText('Gomiti sotto le spalle').first().isVisible());
     await page.goto(BASE + '/#/progressi');

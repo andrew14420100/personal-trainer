@@ -2,7 +2,11 @@ import { ArrowRight, Clapperboard, Clock, Dumbbell, Activity, AlertTriangle } fr
 import { useData } from '../app/store';
 import { DAYS, DAY_BY_ID, SLOTS } from '../data/program';
 import { EXERCISES, EXERCISE_BY_ID } from '../data/exercises';
-import { VIDEOS_BY_EXERCISE, youtubeThumb } from '../data/videos';
+import { youtubeThumb } from '../data/videos';
+import { REAL_VIDEOS } from '../data/realVideos';
+import { EXERCISE_MUSCLES, MUSCLE_LABEL, aggregate } from '../data/muscles';
+import { DayCard } from '../components/DayCard';
+import { Anatomy } from '../components/Anatomy';
 import { effectiveDay, estimateMinutes, formatPrescription, type EffectiveSlot } from '../lib/plan';
 import { lastLog, doneSets } from '../lib/stats';
 import { navigate } from '../lib/router';
@@ -14,7 +18,6 @@ import type { ExerciseLog } from '../lib/db';
 import { kg } from '../lib/format';
 
 export function Program() {
-  const { settings, calibration } = useData();
   return (
     <main className="screen">
       <div className="brandbar">
@@ -43,31 +46,10 @@ export function Program() {
         </span>
         <ArrowRight size={18} />
       </button>
-      <div className="stack" style={{ marginTop: 18, gap: 12 }}>
-        {DAYS.map((d) => {
-          const sl = effectiveDay(d.id, settings, calibration);
-          return (
-            <button key={d.id} className="day-card" style={{ ['--accent' as string]: d.accent, minHeight: 170 }} onClick={() => navigate(`/giorno/${d.id}`)}>
-              <img src={d.photo} alt="" style={{ objectPosition: d.photoPosition }} loading="lazy" />
-              <span className="bar" />
-              <div className="grow">
-                <div className="eyebrow" style={{ color: 'var(--accent)' }}>
-                  {d.weekdayLabel}
-                </div>
-                <div className="display h2" style={{ marginTop: 4 }}>
-                  {d.name}
-                </div>
-                <div className="small text-2" style={{ marginTop: 6 }}>
-                  {d.title}
-                </div>
-                <div className="small text-2" style={{ marginTop: 8 }}>
-                  {sl.length} esercizi · {sl.reduce((a, s) => a + s.todaySets, 0)} serie · ~{estimateMinutes(sl)} min
-                </div>
-              </div>
-              <ArrowRight size={22} />
-            </button>
-          );
-        })}
+      <div className="stack" style={{ marginTop: 18, gap: 14 }}>
+        {DAYS.map((d) => (
+          <DayCard key={d.id} day={d} today={d.weekday === new Date().getDay()} />
+        ))}
       </div>
     </main>
   );
@@ -91,13 +73,13 @@ export function DayScreen({ dayId }: { dayId: DayId }) {
           {photoCredit(day.photo)}
         </span>
         <div className="eyebrow" style={{ color: 'var(--accent)' }}>
-          {day.weekdayLabel}
+          Giorno {day.number} · {day.weekdayLabel} · {day.code}
         </div>
-        <h1 className="display h1" style={{ marginTop: 6 }}>
+        <h1 className="display h2" style={{ marginTop: 6, textWrap: 'balance' }}>
           {day.name}
         </h1>
         <p className="text-2" style={{ marginTop: 6 }}>
-          {day.title}
+          {day.title.split(' · ')[0]}
         </p>
         <div className="row small text-2" style={{ marginTop: 12, gap: 16 }}>
           <span className="row" style={{ gap: 6 }}>
@@ -114,7 +96,7 @@ export function DayScreen({ dayId }: { dayId: DayId }) {
 
       <div style={{ marginTop: 18 }}>
         <button className="btn accent lg block" onClick={begin}>
-          {active ? (active.dayId === dayId ? 'Riprendi allenamento' : 'Allenamento in corso') : `Inizia ${day.name}`} <ArrowRight size={20} />
+          {active ? (active.dayId === dayId ? 'Riprendi allenamento' : 'Allenamento in corso') : 'Inizia allenamento'} <ArrowRight size={20} />
         </button>
         {active && active.dayId !== dayId && (
           <p className="small text-2" style={{ marginTop: 8 }}>
@@ -129,6 +111,23 @@ export function DayScreen({ dayId }: { dayId: DayId }) {
         </div>
       )}
 
+      <section className="card tight" style={{ marginTop: 18 }} aria-label="Muscoli allenati">
+        <div className="row" style={{ gap: 14, alignItems: 'center' }}>
+          <div style={{ width: 150, flex: 'none' }}>
+            <Anatomy {...aggregate(slots.map((x) => x.exerciseId))} size="sm" />
+          </div>
+          <div className="grow">
+            <div className="eyebrow">Muscoli allenati</div>
+            <div className="small" style={{ marginTop: 6, lineHeight: 1.5 }}>
+              <b>Principali:</b> {aggregate(slots.map((x) => x.exerciseId)).primary.map((m) => MUSCLE_LABEL[m]).join(', ')}
+            </div>
+            <div className="small text-2" style={{ marginTop: 4, lineHeight: 1.5 }}>
+              <b>Secondari:</b> {aggregate(slots.map((x) => x.exerciseId)).secondary.map((m) => MUSCLE_LABEL[m]).join(', ') || '—'}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div className="stack" style={{ marginTop: 18, gap: 10 }}>
         {slots.map((s) => (
           <SlotRow key={s.id} slot={s} last={lastLog(sessions, s.exerciseId)?.log ?? null} />
@@ -140,24 +139,31 @@ export function DayScreen({ dayId }: { dayId: DayId }) {
 
 function SlotRow({ slot, last }: { slot: EffectiveSlot; last: ExerciseLog | null }) {
   const ex = EXERCISE_BY_ID[slot.exerciseId];
-  const vid = VIDEOS_BY_EXERCISE[slot.exerciseId]?.demo;
+  const mus = EXERCISE_MUSCLES[slot.exerciseId];
+  const vid = REAL_VIDEOS[slot.exerciseId]?.[0];
   const sets = last ? doneSets(last) : [];
   const topW = sets.length ? Math.max(...sets.map((x) => x.weight ?? 0)) : null;
   return (
-    <button className="ex-row" onClick={() => navigate(`/esercizio/${slot.exerciseId}?slot=${slot.id}`)}>
-      <div className="ex-thumb">
+    <button className="ex-row ex-row-lg" onClick={() => navigate(`/esercizio/${slot.exerciseId}?slot=${slot.id}`)}>
+      <div className="ex-thumb tall">
         {vid && <img src={youtubeThumb(vid.youtubeId)} alt="" loading="lazy" onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')} />}
         <span className="n">{slot.order}</span>
       </div>
       <div className="grow">
-        <div className="ex-name">{ex.name}</div>
-        <div className="ex-meta">
-          {formatPrescription(slot, slot.todaySets)}
-          {slot.todaySets !== slot.plannedSets && <span className="muted"> ({slot.plannedSets})</span>}
-          {' · '}rec. {slot.restSec}s
+        <div className="eyebrow" style={{ color: 'var(--accent)', fontSize: 11 }}>
+          {mus.group}
         </div>
-        <div className="ex-meta muted">
-          {topW != null && ex.tracking === 'reps' ? `Ultimo carico: ${kg(topW)}` : ex.primary.join(', ')}
+        <div className="ex-name" style={{ marginTop: 2 }}>
+          {ex.name}
+        </div>
+        <div className="row wrap" style={{ gap: 6, marginTop: 6 }}>
+          <span className="chip accent num">{formatPrescription(slot, slot.todaySets)}</span>
+          <span className="chip num">rec. {slot.restSec}s</span>
+        </div>
+        <div className="ex-meta muted" style={{ marginTop: 6 }}>
+          {mus.primary.map((m) => MUSCLE_LABEL[m]).join(', ')}
+          {topW != null && ex.tracking === 'reps' ? ` · ultimo ${kg(topW)}` : ''}
+          {slot.todaySets !== slot.plannedSets && ` · poi ${slot.plannedSets} serie`}
           {ex.variantNote && (
             <span style={{ color: 'var(--progress)' }}>
               {' '}

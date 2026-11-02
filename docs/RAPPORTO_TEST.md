@@ -1,3 +1,22 @@
+# Aggiornamento — nomi chiari, anatomia, video reali
+
+| Verifica | Esito |
+|---|---|
+| Test unitari | **57/57** (+6: nomi delle giornate senza Upper/Lower, muscoli della giornata coerenti con gli esercizi, anatomia valida per tutti i 25 esercizi, video reali per tutte le 26 posizioni, ID unici, varianti annotate) |
+| End-to-end iPhone 14 Pro / iPhone SE / desktop | **145/145** (card giornata con anatomia e “Inizia allenamento”, intestazione “nome — gruppo”, scheda rapida, mappa con muscoli principali evidenziati, player verticale del video reale, link all’originale se il video non può caricarsi, schema animato, registro e persistenza) |
+| Video reali | **49/49** esistenti e incorporabili (oEmbed), 25/25 esercizi coperti; contenuto controllato sui fotogrammi pubblici di anteprima |
+
+1. **Nomi delle giornate comprensibili:** sì, numerati 1–4, con la sigla tecnica solo come etichetta secondaria. Superato.
+2. **Muscoli allenati per ogni giornata:** derivati automaticamente dagli esercizi; il test controlla che tutti i muscoli principali compaiano. Superato.
+3. **Anatomia corretta per i 26 esercizi:** principali e secondari in `src/data/muscles.ts`, coerenti con le schede tecniche. Superato. La revisione di un professionista è comunque consigliata.
+4. **Video corrispondenti agli esercizi:** verificati su titolo, autore e fotogrammi. 5 video su 49 mostrano una variante simile e sono segnalati come tali: i 2 di split squat senza appoggio, il calf raise su gradino, e le alternative con presa larga e con curl al cavo. L’audio non è verificato e i video partono muti.
+5. **Video su iPhone:** la riproduzione inline, muta e in loop sul dispositivo reale va confermata da te. Se il caricamento fallisce compare sempre il link “Apri su YouTube”.
+6–7. **Pulsanti e registro:** verificati dagli e2e (serie, carichi, persistenza dopo ricarica, backup).
+8. **Interfaccia mobile:** nessuno scorrimento orizzontale e target di tocco adeguati su 320 e 393 px.
+9. **Funzioni esistenti:** nessuna rimossa. Gli schemi animati restano disponibili nella scheda “Schema”, i tuoi video in “Tuo”, i tutorial parlati in “Fonti esterne”.
+
+---
+
 # Rapporto di verifica — FORMA LAB 3.0
 
 Aggiornamento del 2 novembre 2026 (versione 3.0). Le sezioni successive riportano anche le verifiche della 2.0, ancora valide.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Film, Play } from 'lucide-react';
 import { ANIMATIONS, ANIMATION_BY_EXERCISE } from '../anim/library';
+import { REAL_VIDEOS } from '../data/realVideos';
 import { listMediaIds } from '../lib/db';
 import { useData } from '../app/store';
 import { EXERCISES, EXERCISE_BY_ID } from '../data/exercises';
@@ -33,36 +34,39 @@ export function Videos() {
 
       <div className="stat-grid" style={{ marginTop: 16 }}>
         <div className="stat">
-          <div className="stat-label">Animazioni tecniche</div>
+          <div className="stat-label">Video reali (atleti)</div>
           <div className="stat-value" style={{ color: 'var(--right)' }}>
-            {ANIMATIONS.length}/{EXERCISES.length}
+            {EXERCISES.filter((e) => REAL_VIDEOS[e.id]?.length).length}/{EXERCISES.length}
           </div>
-          <div className="stat-sub">{animErrors} errori animati ✕ → ✓ · offline</div>
+          <div className="stat-sub">
+            {EXERCISES.filter((e) => REAL_VIDEOS[e.id]?.[0]?.overlays).length} con ❌/✅ sul video · avvio muto
+          </div>
         </div>
         <div className="stat">
-          <div className="stat-label">Video reali annotati</div>
+          <div className="stat-label">Schemi tecnici animati</div>
+          <div className="stat-value">{ANIMATIONS.length}</div>
+          <div className="stat-sub">{animErrors} errori ✕ → ✓ · non sono video</div>
+        </div>
+        <div className="stat">
+          <div className="stat-label">Tuoi video annotati</div>
           <div className="stat-value" style={{ color: ownQuick + ownErr ? 'var(--data)' : 'var(--progress)' }}>
             {ownQuick + ownErr}/{EXERCISES.length * 2}
           </div>
           <div className="stat-sub">registrati da te · {ownQuick} demo, {ownErr} errori</div>
         </div>
         <div className="stat">
-          <div className="stat-label">Riferimenti YouTube</div>
+          <div className="stat-label">Tutorial esterni</div>
           <div className="stat-value">{ids.length}</div>
-          <div className="stat-sub">solo link esterni · {approved} approvati da te</div>
+          <div className="stat-sub">parlati, secondari · {approved} approvati</div>
         </div>
-        <div className="stat">
-          <div className="stat-label">Video reali di terzi modificabili</div>
-          <div className="stat-value" style={{ color: 'var(--progress)' }}>0</div>
-          <div className="stat-sub">nessuna licenza compatibile trovata</div>
-        </div>
+
       </div>
 
       <div style={{ marginTop: 14 }}>
         <Notice kind="info">
-          <b>Come sono fatti i video.</b> Ogni esercizio ha un’animazione tecnica originale (manichino con cinematica reale, ✕ rosse e ✓ verdi sul movimento, loop silenzioso). I video di atleti reali con
-          le stesse annotazioni si creano registrando con l’iPhone e annotando nell’app: non esistono filmati gratuiti di queste macchine con licenza che permetta di modificarli. I video YouTube restano solo
-          come fonte esterna. Le animazioni sono schematiche: falle validare da un professionista per i casi delicati.
+          <b>Da dove vengono i video.</b> Per ogni esercizio è stato scelto un video breve di un atleta reale (YouTube Shorts) che mostra l’esercizio, quasi sempre con ❌ rossi e ✅ verdi. I video
+          sono di terzi: vengono incorporati con il player ufficiale, senza modifiche, e partono senza audio (puoi attivarlo). Richiedono la connessione. La corrispondenza è stata verificata su
+          titolo, autore e fotogrammi pubblici di anteprima; guardali e segnala con Approva/Non adatto quelli da sostituire.
         </Notice>
       </div>
 
@@ -78,7 +82,7 @@ export function Videos() {
                   <div className="row between">
                     <b>{ex.name}</b>
                     <span className="row" style={{ gap: 4 }}>
-                      <span className="chip ok">Anim. ✓</span>
+                      <span className={`chip ${REAL_VIDEOS[ex.id]?.length ? 'ok' : 'warn'}`}>{REAL_VIDEOS[ex.id]?.length ? `Video ${REAL_VIDEOS[ex.id].length}` : 'Manca video'}</span>
                       <span className={`chip ${q || e ? 'ok' : ''}`}>Reale {q || e ? `${(q ? 1 : 0) + (e ? 1 : 0)}/2` : '—'}</span>
                     </span>
                   </div>
@@ -89,8 +93,17 @@ export function Videos() {
                       <Play size={14} /> Apri l’esercizio
                     </button>
                   </div>
+                  {(REAL_VIDEOS[ex.id] ?? []).map((v) => (
+                    <div key={v.youtubeId} className="text-2">
+                      <b style={{ color: 'var(--text)' }}>{v.author}</b> — {v.title}{' '}
+                      <span className={`chip ${v.match === 'esatto' ? 'ok' : 'warn'}`}>{v.match}</span> {v.overlays ? <span className="chip ok">❌/✅</span> : null}{' '}
+                      <a href={youtubeWatchUrl(v.youtubeId)} target="_blank" rel="noopener noreferrer">
+                        originale
+                      </a>
+                    </div>
+                  ))}
                   <div className="text-2">
-                    <b style={{ color: 'var(--text)' }}>Animazione:</b> vista {a.view.toLowerCase()} · errori animati: {a.errors.map((x) => x.bad.toLowerCase()).join(' · ')}.
+                    <b style={{ color: 'var(--text)' }}>Schema animato:</b> vista {a.view.toLowerCase()} · errori animati: {a.errors.map((x) => x.bad.toLowerCase()).join(' · ')}.
                   </div>
                   <Storyboard exerciseId={ex.id} />
                 </div>

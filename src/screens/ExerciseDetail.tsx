@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ExternalLink, Star, Timer, Wind, TrendingUp, CheckCircle2, XCircle, Repeat2 } from 'lucide-react';
+import { ExternalLink, Star, Timer, Wind, TrendingUp, Repeat2 } from 'lucide-react';
 import { useData, useSettingsUpdater } from '../app/store';
 import { EXERCISE_BY_ID } from '../data/exercises';
 import { DAY_BY_ID, SLOTS } from '../data/program';
@@ -15,6 +15,9 @@ import { VideoPlayer } from '../components/VideoPlayer';
 import { Cues, FixCard, TutorialPhases } from '../components/Technique';
 import { ChartCard } from '../components/Charts';
 import { MediaHero } from '../components/MediaHero';
+import { VideoReview } from '../components/VideoReview';
+import { Anatomy } from '../components/Anatomy';
+import { EXERCISE_MUSCLES, MUSCLE_LABEL } from '../data/muscles';
 import { NotFound } from './Program';
 
 export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) {
@@ -41,6 +44,7 @@ export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) 
   const hint = primarySlot ? progressionHint(ex, { repsMin: primarySlot.repsMin, repsMax: primarySlot.repsMax, sets: primarySlot.plannedSets }, last?.log ?? null) : null;
   const fav = data.settings.favorites.includes(id);
   const rest = data.settings.restOverrides[id] ?? ex.restSec;
+  const mus = EXERCISE_MUSCLES[id];
   const allCorrected = ex.errors.every((e) => corrected[e.id]);
 
   const toggleFav = () =>
@@ -58,30 +62,56 @@ export function ExerciseDetail({ id, slotId }: { id: string; slotId?: string }) 
         }
       />
 
-      {/* 1–2 Name and muscles */}
+      {/* 1–2 Name, muscle group and key facts at a glance */}
       <div className="eyebrow" style={{ color: 'var(--accent)' }}>
-        {ex.category} · {ex.equipment}
+        {mus.group} · {ex.category}
       </div>
-      <h1 className="display h2" style={{ marginTop: 6 }}>
-        {ex.name}
+      <h1 className="display h2" style={{ marginTop: 6, textWrap: 'balance' }}>
+        {ex.name} <span style={{ color: 'var(--accent)' }}>— {mus.group}</span>
       </h1>
-      <div className="chips" style={{ marginTop: 10 }}>
-        {ex.primary.map((m) => (
-          <span key={m} className="chip accent">
-            {m}
-          </span>
-        ))}
-        {ex.secondary.map((m) => (
-          <span key={m} className="chip">
-            {m}
-          </span>
-        ))}
-      </div>
 
-      {/* 3–6 Video: technical scene first */}
+      {/* 3–6 Video: real demonstration first */}
       <div style={{ marginTop: 16 }}>
         <MediaHero exerciseId={id} />
       </div>
+      <section className="card tight ex-facts" style={{ marginTop: 14 }} aria-label="Scheda rapida">
+        <div className="ex-facts-grid">
+          <div>
+            <div className="label">Muscolo principale</div>
+            <div className="ex-fact-v">{mus.primary.map((m) => MUSCLE_LABEL[m]).join(', ')}</div>
+          </div>
+          <div>
+            <div className="label">Muscoli secondari</div>
+            <div className="ex-fact-v small">{mus.secondary.map((m) => MUSCLE_LABEL[m]).join(', ') || '—'}</div>
+          </div>
+          <div>
+            <div className="label">Attrezzatura</div>
+            <div className="ex-fact-v small">{ex.equipment}</div>
+          </div>
+          <div className="ex-facts-nums">
+            <div>
+              <div className="label">Serie</div>
+              <div className="ex-fact-n">{primarySlot?.todaySets ?? '—'}</div>
+            </div>
+            <div>
+              <div className="label">{ex.tracking === 'time' ? 'Secondi' : 'Ripetizioni'}</div>
+              <div className="ex-fact-n">{primarySlot ? `${primarySlot.repsMin}–${primarySlot.repsMax}` : '—'}</div>
+            </div>
+            <div>
+              <div className="label">Recupero</div>
+              <div className="ex-fact-n">{rest}s</div>
+            </div>
+          </div>
+        </div>
+        <div className="ex-facts-anat">
+          <Anatomy primary={mus.primary} secondary={mus.secondary} size="sm" legend={false} />
+          <div className="tiny muted" style={{ textAlign: 'center', marginTop: 4 }}>
+            <span style={{ color: 'var(--muscle-p)' }}>■</span> principali <span style={{ color: 'var(--muscle-s)' }}>■</span> secondari
+          </div>
+        </div>
+      </section>
+      {primarySlot?.sideLabel && <p className="tiny muted" style={{ marginTop: 6 }}>Ripetizioni {primarySlot.sideLabel}.</p>}
+
       {ex.variantNote && (
         <div style={{ marginTop: 10 }}>
           <Notice>
@@ -338,45 +368,6 @@ function VideoMeta({ video }: { video: VideoSource }) {
         <p className="tiny text-2" style={{ marginTop: 8 }}>
           {video.matchNote}
         </p>
-      )}
-    </div>
-  );
-}
-
-function VideoReview({ youtubeId }: { youtubeId: string }) {
-  const { settings } = useData();
-  const update = useSettingsUpdater();
-  const r = settings.videoReviews[youtubeId];
-  const set = (status: 'approvato' | 'non adatto' | null) =>
-    update((s) => {
-      const v = { ...s.videoReviews };
-      if (status) v[youtubeId] = { status, date: new Date().toISOString().slice(0, 10) };
-      else delete v[youtubeId];
-      return { ...s, videoReviews: v };
-    });
-  return (
-    <div className="row wrap small" style={{ marginTop: 8, gap: 8 }}>
-      {r ? (
-        <>
-          <span className={`chip ${r.status === 'approvato' ? 'ok' : 'bad'}`}>
-            {r.status === 'approvato' ? <CheckCircle2 size={14} /> : <XCircle size={14} />} {r.status === 'approvato' ? 'Approvato da te' : 'Segnato come non adatto'} il {r.date}
-          </span>
-          <button className="link" onClick={() => set(null)}>
-            Annulla
-          </button>
-        </>
-      ) : (
-        <>
-          <span className="muted">
-            <AlertTriangle size={13} style={{ verticalAlign: '-2px' }} /> Contenuto non ancora revisionato da te:
-          </span>
-          <button className="btn sm" onClick={() => set('approvato')}>
-            Approva
-          </button>
-          <button className="btn sm ghost" onClick={() => set('non adatto')}>
-            Non adatto
-          </button>
-        </>
       )}
     </div>
   );

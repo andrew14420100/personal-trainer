@@ -74,7 +74,13 @@ export interface Day {
   id: DayId;
   weekday: number; // 0 = Sunday … 6 = Saturday (JS getDay)
   weekdayLabel: string;
+  /** Day number in the week plan (1–4). */
+  number: number;
+  /** Main, self-explanatory name based on the muscles trained. */
   name: string;
+  /** Technical code of the split (secondary label), e.g. "Upper A". */
+  code: string;
+  /** Short subtitle with the other muscles involved. */
   title: string;
   focus: string[];
   accent: string;

@@ -5,10 +5,13 @@ import { DAYS, DAY_BY_ID, dayForWeekday, nextScheduledDay } from '../data/progra
 import { EXERCISE_BY_ID } from '../data/exercises';
 import { effectiveDay, estimateMinutes, CALIBRATION_SESSIONS } from '../lib/plan';
 import { completed, exerciseHistory, isoDate, sessionDurationMin, sessionVolume, weekOverWeek, weekStart } from '../lib/stats';
-import { fullDate, greeting, num, relativeDays, shortDate, volume } from '../lib/format';
+import { fullDate, greeting, num, relativeDays, volume } from '../lib/format';
 import { navigate } from '../lib/router';
 import { startSession } from '../lib/workout';
 import { Empty, Notice, Section, Sheet } from '../components/ui';
+import { DayCard } from '../components/DayCard';
+import { Anatomy } from '../components/Anatomy';
+import { aggregate } from '../data/muscles';
 import { photoCredit, restDayPhoto } from '../data/media';
 import type { DayId } from '../data/types';
 import { youtubeThumb } from '../data/videos';
@@ -54,15 +57,22 @@ export function Home() {
         <span className="credit">{photoCredit(todayDay ? shown.photo : restDayPhoto)}</span>
         {todayDay ? (
           <>
-            <div className="eyebrow" style={{ color: 'var(--accent)' }}>
-              Oggi · {todayDay.weekdayLabel}
+            <div className="row" style={{ alignItems: 'flex-end', gap: 12 }}>
+              <div className="grow">
+                <div className="eyebrow" style={{ color: 'var(--accent)' }}>
+                  Oggi · Giorno {todayDay.number} · {todayDay.code}
+                </div>
+                <h2 className="display h2" style={{ marginTop: 8, textWrap: 'balance' }}>
+                  {todayDay.name}
+                </h2>
+                <p className="text-2" style={{ marginTop: 6 }}>
+                  {todayDay.title.split(' · ')[0]}
+                </p>
+              </div>
+              <div style={{ width: 104, flex: 'none' }} aria-hidden>
+                <Anatomy {...aggregate(slots.map((x) => x.exerciseId))} size="sm" legend={false} />
+              </div>
             </div>
-            <h2 className="display h1" style={{ marginTop: 8 }}>
-              {todayDay.name}
-            </h2>
-            <p className="text-2" style={{ marginTop: 6 }}>
-              {todayDay.title}
-            </p>
           </>
         ) : (
           <>
@@ -148,32 +158,26 @@ export function Home() {
 
       <Stats />
 
-      <Section title="I quattro allenamenti" action={<button className="link" onClick={() => navigate('/scheda')}>Scheda completa</button>}>
-        <div className="stack" style={{ gap: 10 }}>
-          {DAYS.map((d) => {
-            const sl = effectiveDay(d.id, settings, calibration);
-            const last = [...done].reverse().find((s) => s.dayId === d.id);
-            return (
-              <button key={d.id} className="day-card" style={{ ['--accent' as string]: d.accent, minHeight: 112 }} onClick={() => navigate(`/giorno/${d.id}`)}>
-                <img src={d.photo} alt="" style={{ objectPosition: d.photoPosition }} loading="lazy" />
-                <span className="bar" />
-                <div className="grow">
-                  <div className="eyebrow" style={{ color: 'var(--accent)' }}>
-                    {d.weekdayLabel}
-                  </div>
-                  <div className="display h3" style={{ marginTop: 4 }}>
-                    {d.name}
-                  </div>
-                  <div className="small text-2" style={{ marginTop: 4 }}>
-                    {sl.length} esercizi · ~{estimateMinutes(sl)} min · {last ? `ultima ${shortDate(last.startedAt)}` : 'mai eseguito'}
-                  </div>
-                </div>
-                <ArrowRight size={20} />
-              </button>
-            );
-          })}
+      <Section title="I tuoi allenamenti" action={<button className="link" onClick={() => navigate('/scheda')}>Tutti gli esercizi</button>}>
+        <div className="stack" style={{ gap: 14 }}>
+          {DAYS.map((d) => (
+            <DayCard key={d.id} day={d} today={todayDay?.id === d.id} />
+          ))}
         </div>
       </Section>
+
+      <button className="card tap tight row between" style={{ marginTop: 18 }} onClick={() => navigate('/progressi?tab=grafici')}>
+        <span className="row" style={{ gap: 10 }}>
+          <TrendingUp size={20} color="var(--data)" />
+          <span>
+            <b>I tuoi progressi</b>
+            <span className="small text-2" style={{ display: 'block' }}>
+              Carichi, volume, frequenza e confronti settimanali
+            </span>
+          </span>
+        </span>
+        <ArrowRight size={18} />
+      </button>
 
       <Favorites />
 

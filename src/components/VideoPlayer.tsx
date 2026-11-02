@@ -6,8 +6,18 @@
 // - If the embed fails (owner disabled embedding, offline, blocked) an explicit message and a
 //   direct link to the original source are shown: never a permanently stuck player.
 import { useEffect, useId, useRef, useState } from 'react';
-import { ExternalLink, Pause, Play, RotateCcw, Repeat, WifiOff, AlertTriangle, Gauge } from 'lucide-react';
-import { youtubeThumb, youtubeWatchUrl, type VideoSource } from '../data/videos';
+import { ExternalLink, Pause, Play, RotateCcw, Repeat, WifiOff, AlertTriangle, Gauge, Volume2, VolumeX } from 'lucide-react';
+import { youtubeThumb, youtubeWatchUrl } from '../data/videos';
+
+/** Minimal description of a YouTube video to play. */
+export interface PlayableVideo {
+  youtubeId: string;
+  author: string;
+  title: string;
+  duration?: string;
+  language?: 'EN' | 'IT';
+  kind?: string;
+}
 
 interface YTPlayer {
   playVideo(): void;
@@ -16,6 +26,8 @@ interface YTPlayer {
   setPlaybackRate(r: number): void;
   getAvailablePlaybackRates(): number[];
   getPlayerState(): number;
+  mute(): void;
+  unMute(): void;
   destroy(): void;
 }
 interface YTNamespace {
@@ -53,13 +65,30 @@ function loadApi(): Promise<YTNamespace> {
 type Status = 'idle' | 'loading' | 'ready' | 'error' | 'offline' | 'timeout';
 const SPEEDS = [0.25, 0.5, 0.75, 1];
 
-export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: { video?: VideoSource; label: string; bleed?: boolean; autoLoad?: boolean }) {
+export function VideoPlayer({
+  video,
+  label,
+  bleed = false,
+  autoLoad = false,
+  vertical = false,
+  startMuted = false,
+}: {
+  video?: PlayableVideo;
+  label: string;
+  bleed?: boolean;
+  autoLoad?: boolean;
+  /** 9:16 frame for Shorts. */
+  vertical?: boolean;
+  /** Start without audio (the user can turn it on). */
+  startMuted?: boolean;
+}) {
   const hostId = useId().replace(/[:]/g, '');
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [playing, setPlaying] = useState(false);
-  const [loop, setLoop] = useState(video?.kind === 'demo');
+  const [loop, setLoop] = useState(video?.kind === 'demo' || vertical);
+  const [muted, setMuted] = useState(startMuted);
   const loopRef = useRef(loop);
   loopRef.current = loop;
   const [speed, setSpeed] = useState(1);
@@ -72,12 +101,13 @@ export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: {
     setPlaying(false);
     setSpeed(1);
     setErrCode(null);
-    setLoop(video?.kind === 'demo');
+    setLoop(video?.kind === 'demo' || vertical);
+    setMuted(startMuted);
     return () => {
       playerRef.current?.destroy();
       playerRef.current = null;
     };
-  }, [video?.youtubeId, autoLoad, video?.kind]);
+  }, [video?.youtubeId, autoLoad, video?.kind, vertical, startMuted]);
 
   useEffect(() => {
     if (status !== 'loading' || !video) return;
@@ -98,13 +128,14 @@ export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: {
           videoId: video.youtubeId,
           width: '100%',
           height: '100%',
-          playerVars: { playsinline: 1, rel: 0, modestbranding: 1, autoplay: 1, controls: 1, iv_load_policy: 3, origin: location.origin },
+          playerVars: { playsinline: 1, rel: 0, modestbranding: 1, autoplay: 1, controls: 1, iv_load_policy: 3, mute: startMuted ? 1 : 0, origin: location.origin },
           events: {
             onReady: (e: { target: YTPlayer }) => {
               if (cancelled) return;
               clearTimeout(timeout);
               setStatus('ready');
               try {
+                if (startMuted) e.target.mute();
                 const r = e.target.getAvailablePlaybackRates();
                 if (r?.length) setRates(SPEEDS.filter((x) => r.includes(x)));
                 e.target.playVideo();
@@ -162,7 +193,7 @@ export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: {
 
   return (
     <div>
-      <div className={`player${bleed ? ' bleed' : ''}`} aria-label={`Video: ${label}`}>
+      <div className={`player${bleed ? ' bleed' : ''}${vertical ? ' vertical' : ''}`} aria-label={`Video: ${label}`}>
         <div ref={hostRef} id={`yt-${hostId}`} style={{ position: 'absolute', inset: 0 }} />
         {status === 'idle' && (
           <button className="player-facade" onClick={() => setStatus('loading')} aria-label={`Riproduci video: ${video.title}`}>
@@ -172,7 +203,7 @@ export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: {
             </span>
             <span className="player-tag">
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{video.author}</span>
-              <span>{video.duration}</span>
+              <span>{video.duration ?? ''}</span>
             </span>
           </button>
         )}
@@ -233,6 +264,20 @@ export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: {
         >
           <RotateCcw size={19} />
         </button>
+        <button
+          className={`icon-btn${muted ? '' : ' on'}`}
+          aria-pressed={!muted}
+          aria-label={muted ? 'Attiva audio' : 'Disattiva audio'}
+          onClick={() => {
+            if (status === 'ready') {
+              if (muted) p?.unMute();
+              else p?.mute();
+            }
+            setMuted((m) => !m);
+          }}
+        >
+          {muted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+        </button>
         <button className={`icon-btn${loop ? ' on' : ''}`} aria-pressed={loop} aria-label="Ripeti in loop" onClick={() => setLoop((l) => !l)}>
           <Repeat size={19} />
         </button>
@@ -259,7 +304,7 @@ export function VideoPlayer({ video, label, bleed = false, autoLoad = false }: {
       </div>
       <div className="source-line">
         <span>
-          Fonte: <b style={{ color: 'var(--text-2)' }}>{video.author}</b> · YouTube · {video.language === 'IT' ? 'italiano' : 'inglese'}
+          Fonte: <b style={{ color: 'var(--text-2)' }}>{video.author}</b> · YouTube{video.language ? ` · ${video.language === 'IT' ? 'italiano' : 'inglese'}` : ''}
         </span>
         <a href={url} target="_blank" rel="noopener noreferrer" className="row" style={{ gap: 4, color: 'var(--text-2)' }}>
           originale <ExternalLink size={12} />

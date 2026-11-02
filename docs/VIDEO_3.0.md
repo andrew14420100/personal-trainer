@@ -1,3 +1,5 @@
+> **Aggiornamento:** su tua richiesta i video principali ora sono **video reali esistenti online** (YouTube Shorts di atleti, con ❌/✅): vedi [VIDEO_REALI.md](VIDEO_REALI.md). Gli schemi animati descritti qui restano solo come “Schema” tecnico (non sono video) e non sono più la fonte principale.
+
 # FORMA LAB 3.0 — Video tecnici
 
 ## 1. Analisi dei tre video di riferimento
