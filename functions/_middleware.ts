@@ -22,6 +22,8 @@ interface Ctx {
 }
 
 // Public, non-personal files needed by iOS to install the Home Screen icon.
+const MIN_PIN = 6;
+
 const PUBLIC = [/^\/manifest\.webmanifest$/, /^\/icons\/[\w.-]+$/, /^\/robots\.txt$/];
 
 const CSP = [
@@ -76,16 +78,20 @@ button{margin-top:20px;width:100%;min-height:56px;border:0;border-radius:16px;ba
 small{display:block;color:#85858d;margin-top:18px;font-size:12px}</style></head><body><main><div class="b">FORMA<i>·</i>LAB</div>${inner}</main></body></html>`;
 }
 
-function loginPage(error?: string, next = '/'): string {
+function loginPage(mode: 'totp' | 'pin', error?: string, next = '/'): string {
+  const fields =
+    mode === 'pin'
+      ? `<label for="p">PIN</label><input id="p" class="code" name="password" type="password" autocomplete="current-password" required autofocus>`
+      : `<label for="p">Passphrase</label><input id="p" name="password" type="password" autocomplete="current-password" required>
+<label for="c">Codice temporaneo</label><input id="c" class="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>`;
   return page(
     'Accesso — FORMA LAB',
-    `<h1>Accesso privato</h1><p>Inserisci la passphrase e il codice a 6 cifre della tua app di autenticazione.</p>
+    `<h1>Accesso privato</h1><p>${mode === 'pin' ? 'Inserisci il tuo PIN.' : 'Inserisci la passphrase e il codice a 6 cifre della tua app di autenticazione.'}</p>
 ${error ? `<div class="e" role="alert">${error}</div>` : ''}
 <form method="post" action="/__auth/login" autocomplete="on">
 <input type="hidden" name="next" value="${next.replace(/[^\w/?=&#-]/g, '')}">
 <label for="u">Utente</label><input id="u" name="username" value="forma-lab" autocomplete="username" readonly>
-<label for="p">Passphrase</label><input id="p" name="password" type="password" autocomplete="current-password" required>
-<label for="c">Codice temporaneo</label><input id="c" class="code" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+${fields}
 <button type="submit">Entra</button></form>
 <small>Connessione HTTPS. Dopo l’accesso la sessione resta valida su questo dispositivo per un periodo limitato.</small>`,
   );
@@ -112,16 +118,26 @@ export async function onRequest(ctx: Ctx): Promise<Response> {
     return secure(await ctx.next());
   }
 
-  // ── Mode B: passphrase + TOTP handled here ──
-  const configured = mode === 'totp' && env.AUTH_PASSWORD && env.AUTH_TOTP_SECRET && (env.AUTH_SESSION_SECRET?.length ?? 0) >= 32;
+  // ── Mode B (passphrase + TOTP) and Mode C (personal PIN) handled here ──
+  const strongSecret = (env.AUTH_SESSION_SECRET?.length ?? 0) >= 32;
+  const configured =
+    strongSecret &&
+    ((mode === 'totp' && !!env.AUTH_PASSWORD && !!env.AUTH_TOTP_SECRET) || (mode === 'pin' && (env.AUTH_PIN?.length ?? 0) >= MIN_PIN));
+  if (mode === 'pin' && strongSecret && (env.AUTH_PIN?.length ?? 0) < MIN_PIN) {
+    return html(page('PIN non valido', `<h1>PIN troppo corto</h1><p>Per sicurezza il PIN deve avere almeno ${MIN_PIN} caratteri. Aggiorna il segreto AUTH_PIN e ripubblica.</p>`), 503);
+  }
   if (!configured) {
     return html(
       page('Non configurato', '<h1>Accesso non configurato</h1><p>Per sicurezza l’app non viene servita finché l’autenticazione non è configurata (vedi docs/PUBBLICAZIONE.md).</p>'),
       503,
     );
   }
-  const secret = env.AUTH_SESSION_SECRET!;
-  const days = Math.min(90, Math.max(1, Number(env.AUTH_SESSION_DAYS) || 30));
+  const loginMode = mode as 'totp' | 'pin';
+  const credential = loginMode === 'pin' ? env.AUTH_PIN! : env.AUTH_PASSWORD!;
+  // Sessions are signed with the session secret AND the current PIN/passphrase: changing the
+  // PIN (e.g. after losing a device) logs out every device at once.
+  const secret = `${env.AUTH_SESSION_SECRET}|${credential}`;
+  const days = Math.min(365, Math.max(1, Number(env.AUTH_SESSION_DAYS) || (loginMode === 'pin' ? 365 : 30)));
 
   if (url.pathname === '/__auth/logout') {
     return secure(
@@ -136,7 +152,7 @@ export async function onRequest(ctx: Ctx): Promise<Response> {
     const next = safeNext(url.searchParams.get('next'));
     if (request.method === 'GET') {
       if (await verifySession(secret, readCookie(request, COOKIE))) return secure(Response.redirect(`${url.origin}${next}`, 303));
-      return html(loginPage(undefined, next));
+      return html(loginPage(loginMode, undefined, next));
     }
     if (request.method !== 'POST') return secure(new Response('Method not allowed', { status: 405 }));
     // CSRF: the form must be posted from this site.
@@ -146,18 +162,22 @@ export async function onRequest(ctx: Ctx): Promise<Response> {
       return secure(new Response('Forbidden', { status: 403 }));
     }
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-    if (isRateLimited(ip)) return html(loginPage('Troppi tentativi. Riprova tra 15 minuti.', next), 429, { 'Retry-After': '900' });
+    if (isRateLimited(ip)) return html(loginPage(loginMode, 'Troppi tentativi. Riprova tra 15 minuti.', next), 429, { 'Retry-After': '900' });
 
     const form = await request.formData();
     const password = String(form.get('password') ?? '');
     const code = String(form.get('code') ?? '').replace(/\s/g, '');
     const nextPost = safeNext(String(form.get('next') ?? '/'));
-    const passOk = await safeStringEqual(password, env.AUTH_PASSWORD!, secret);
-    const step = await verifyTotp(env.AUTH_TOTP_SECRET!, code);
-    if (!passOk || step == null || !acceptStep(step)) {
+    const passOk = await safeStringEqual(password, credential, secret);
+    let ok = passOk;
+    if (loginMode === 'totp') {
+      const step = await verifyTotp(env.AUTH_TOTP_SECRET!, code);
+      ok = passOk && step != null && acceptStep(step);
+    }
+    if (!ok) {
       recordFailure(ip);
-      await new Promise((r) => setTimeout(r, 400));
-      return html(loginPage('Passphrase o codice non validi.', nextPost), 401);
+      await new Promise((r) => setTimeout(r, 800));
+      return html(loginPage(loginMode, loginMode === 'pin' ? 'PIN non valido.' : 'Passphrase o codice non validi.', nextPost), 401);
     }
     clearFailures(ip);
     const token = await signSession(secret, Date.now() + days * 86400_000);

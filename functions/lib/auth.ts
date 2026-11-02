@@ -2,8 +2,10 @@
 // Nothing here is shipped to the browser: secrets live in Cloudflare environment variables.
 
 export interface Env {
-  /** 'totp' (passphrase + 6-digit code from an authenticator app) or 'access' (Cloudflare Access in front). */
+  /** 'pin' (personal PIN), 'totp' (passphrase + 6-digit code) or 'access' (Cloudflare Access in front). */
   AUTH_MODE?: string;
+  /** Mode 'pin': the PIN chosen by the user (at least 6 characters). */
+  AUTH_PIN?: string;
   AUTH_PASSWORD?: string;
   AUTH_TOTP_SECRET?: string;
   AUTH_SESSION_SECRET?: string;

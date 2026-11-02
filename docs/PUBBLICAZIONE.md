@@ -6,12 +6,13 @@ Obiettivo: aprire un indirizzo HTTPS in Safari, autenticarti, scegliere **Aggiun
 
 ## 0. Scegli il sistema di accesso
 
-| | **Modalità B — integrata (consigliata)** | **Modalità A — Cloudflare Access** |
-|---|---|---|
-| Come accedi | Passphrase + codice a 6 cifre dall’app Password di iOS (TOTP) | Email + codice temporaneo inviato via email |
-| Costo | Gratis | Gratis fino a 50 utenti (piano Zero Trust Free) |
-| Carta di credito | Non richiesta | All’attivazione di Zero Trust Cloudflare può chiedere un metodo di pagamento anche per il piano gratuito: verificalo al momento dell’iscrizione |
-| Dove sta la protezione | `functions/_middleware.ts`, eseguito sui server Cloudflare prima di servire qualsiasi file | Davanti al sito (Cloudflare) + verifica della firma JWT nel middleware |
+| | **Modalità B — passphrase + codice (più sicura)** | **Modalità C — PIN personale** | **Modalità A — Cloudflare Access** |
+|---|---|---|---|
+| Come accedi | Passphrase + codice a 6 cifre dall’app Password di iOS (TOTP) | Un PIN che scegli tu, uguale su tutti i dispositivi | Email + codice temporaneo inviato via email |
+| Costo | Gratis | Gratis | Gratis fino a 50 utenti (piano Zero Trust Free) |
+| Carta di credito | Non richiesta | Non richiesta | All’attivazione di Zero Trust Cloudflare può chiedere un metodo di pagamento anche per il piano gratuito: verificalo al momento dell’iscrizione |
+| Durata accesso | 30 giorni (fino a 365) | 365 giorni | Impostata in Access |
+| Dove sta la protezione | `functions/_middleware.ts`, sui server Cloudflare prima di servire qualsiasi file | Come B | Davanti al sito (Cloudflare) + verifica della firma JWT nel middleware |
 
 In entrambi i casi l’app **non viene servita** se l’accesso non è configurato (il middleware risponde 503: “fail closed”). Nessun segreto è nel codice del browser.
 
@@ -61,6 +62,26 @@ npx wrangler pages secret put AUTH_MODE --project-name forma-lab
 (valore `totp`), poi allo stesso modo `AUTH_PASSWORD`, `AUTH_TOTP_SECRET`, `AUTH_SESSION_SECRET` e, facoltativa, `AUTH_SESSION_DAYS` (1–90, predefinito 30). In alternativa: dashboard → Workers & Pages → forma-lab → Settings → Variables and Secrets.
 
 Sull’iPhone aggiungi il codice di verifica: **Impostazioni → Password → (+) nuovo elemento** per il dominio `.pages.dev` del progetto → **Imposta codice di verifica → Inserisci chiave di configurazione** → incolla `AUTH_TOTP_SECRET`. Salva anche la passphrase nello stesso elemento: Safari proporrà passphrase e codice in automatico.
+
+## 3-ter. Configura l’accesso — Modalità C (PIN personale, valido su tutti i dispositivi)
+
+Scegli tu un PIN definitivo: lo inserisci una volta su ogni dispositivo (iPhone, PC, tablet) e la sessione resta valida per 365 giorni.
+
+```bash
+npx wrangler pages secret put AUTH_PIN --project-name forma-lab
+```
+
+(scrivi il tuo PIN: **almeno 6 caratteri**; con meno di 6 l’app non viene servita). Poi imposta la modalità:
+
+```bash
+npx wrangler pages secret put AUTH_MODE --project-name forma-lab
+```
+
+(valore `pin`). `AUTH_SESSION_SECRET` resta necessario (già impostato al passo 3). Ripubblica con `npm run deploy`: i segreti valgono solo dal deployment successivo.
+
+- **Cambiare il PIN**: ripeti il primo comando e ripubblica. Tutti i dispositivi vengono disconnessi e dovranno usare il nuovo PIN (utile se perdi un telefono).
+- Safari propone di salvare il PIN nel Portachiavi iCloud: così lo ritrovi su tutti i tuoi dispositivi Apple.
+- **Sicurezza**: un PIN è più debole di passphrase + codice temporaneo. Il server non contiene i tuoi dati di allenamento (sono solo sui dispositivi), ma usa preferibilmente 8 o più caratteri, anche lettere, e attiva la regola di rate limiting gratuita descritta al passo 5.
 
 ## 3-bis. Configura l’accesso — Modalità A (Cloudflare Access)
 

@@ -10,7 +10,7 @@ Applicazione personale di allenamento per iPhone: PWA installabile dalla scherma
 | **Allenamento** | Un esercizio alla volta, carichi/ripetizioni/RIR/tecnica/note, timer di recupero automatico, riepilogo con confronti |
 | **Progressi** | Storico, grafici interattivi, calendario, confronti settimanali, misure corporee, suggerimenti di progressione |
 | **Dati** | Solo sul dispositivo (IndexedDB). Backup cifrato AES-256, importazione, cancellazione totale |
-| **Accesso** | Middleware Cloudflare Pages: passphrase + codice temporaneo TOTP, oppure Cloudflare Access (email + OTP) |
+| **Accesso** | Middleware Cloudflare Pages: PIN personale, oppure passphrase + codice temporaneo TOTP, oppure Cloudflare Access (email + OTP) |
 
 Anteprime: [`docs/screenshots/`](docs/screenshots). Anteprima interattiva in Claude: vedi la consegna (è una copia di prova, non l’app pubblicata).
 

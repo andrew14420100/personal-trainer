@@ -128,3 +128,37 @@ describe('Cloudflare Access JWT', () => {
     expect(await verifyAccessJwt(tampered, env, fakeFetch, now)).toBe(false);
   });
 });
+
+describe('PIN mode', () => {
+  const pinEnv = { AUTH_MODE: 'pin', AUTH_PIN: '482913', AUTH_SESSION_SECRET: 'y'.repeat(48) };
+  const post = (pin: string, e: Record<string, string> = pinEnv, ip = '9.9.9.9') =>
+    onRequest(ctx(new Request(ORIGIN + '/__auth/login', { method: 'POST', body: new URLSearchParams({ password: pin, next: '/' }), headers: { Origin: ORIGIN, 'CF-Connecting-IP': ip } }), e));
+
+  it('shows a PIN-only login page', async () => {
+    const r = await onRequest(ctx(nav('/__auth/login'), pinEnv));
+    const body = await r.text();
+    expect(body).toContain('Inserisci il tuo PIN');
+    expect(body).not.toContain('Codice temporaneo');
+  });
+  it('logs in with the right PIN, for a long-lived session, and rejects a wrong one', async () => {
+    expect((await post('000000')).status).toBe(401);
+    const ok = await post('482913', pinEnv, '9.9.9.8');
+    expect(ok.status).toBe(303);
+    const cookie = ok.headers.get('Set-Cookie')!;
+    expect(cookie).toContain(`Max-Age=${365 * 86400}`);
+    const app = await onRequest(ctx(nav('/', { Cookie: cookie.split(';')[0] }), pinEnv));
+    expect(await app.text()).toBe('APP');
+    // changing the PIN logs out every device
+    const changed = await onRequest(ctx(nav('/', { Cookie: cookie.split(';')[0] }), { ...pinEnv, AUTH_PIN: '777777' }));
+    expect(changed.status).toBe(302);
+  }, 15000);
+  it('refuses to serve the app with a PIN shorter than 6 characters', async () => {
+    const r = await onRequest(ctx(nav('/'), { ...pinEnv, AUTH_PIN: '1234' }));
+    expect(r.status).toBe(503);
+    expect(await r.text()).not.toContain('APP');
+  });
+  it('rate-limits PIN guessing', async () => {
+    for (let i = 0; i < 5; i++) await post('11111' + i, pinEnv, '7.7.7.7');
+    expect((await post('482913', pinEnv, '7.7.7.7')).status).toBe(429);
+  }, 20000);
+});
