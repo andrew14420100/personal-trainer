@@ -161,3 +161,31 @@ npm ci && npm run deploy
 ```
 
 All’apertura successiva l’app mostra “Nuova versione disponibile → Aggiorna”. I dati restano sul dispositivo; il database locale passa alla versione 2 (aggiunge l’archivio dei video personali) senza perdere nulla.
+
+## FORMA LAB 4.0: prima l'anteprima, poi la produzione
+
+Il sito pubblicato (`forma-lab.pages.dev`) **non è stato toccato**. La 4.0 è sul ramo `claude/forma-lab-2-rebuild-qsdfkt`. Procedi così.
+
+**1. Esporta un backup dalla versione attuale.** Apri l'app che usi oggi → Profilo → Esporta tutti i dati, e salva il file.
+
+**2. Pubblica un'anteprima separata.** È protetta dallo stesso PIN, ma ha un indirizzo diverso:
+
+```bash
+git fetch origin claude/forma-lab-2-rebuild-qsdfkt && git checkout claude/forma-lab-2-rebuild-qsdfkt
+```
+
+```bash
+npm ci && npm run build
+```
+
+```bash
+npx wrangler pages deploy dist --project-name forma-lab --branch preview-4
+```
+
+L'anteprima sarà su `https://preview-4.forma-lab.pages.dev`.
+- I segreti di "Preview" sono separati da quelli di "Production". Se l'anteprima risponde "Accesso non configurato", aggiungi `AUTH_MODE`, `AUTH_PIN` e `AUTH_SESSION_SECRET` anche in Settings → Variables and Secrets → **Preview**.
+- Se hai collegato GitHub, Cloudflare crea l'anteprima da sola a ogni push sul ramo.
+
+**3. Prova l'anteprima.** È un indirizzo diverso, quindi parte **senza i tuoi dati**: puoi importare il backup del passo 1 (Profilo → Importa).
+
+**4. Solo dopo la tua approvazione:** unisci il ramo nel ramo di produzione oppure esegui `npm run deploy`. All'apertura dell'app compare "Nuova versione disponibile → Aggiorna". Al primo avvio la 4.0 salva una copia verificata dei dati esistenti (vedi [MIGRAZIONE_4.0.md](MIGRAZIONE_4.0.md)); non converte né cancella nulla.

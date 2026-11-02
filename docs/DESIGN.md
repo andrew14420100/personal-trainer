@@ -1,34 +1,69 @@
-# FASE 2 — Design system “Cinematic”
+# FASE 2 — Design system FORMA LAB 4.0
 
-**Idea guida:** la sala pesi di sera. Nero e antracite come fondo, fotografie autentiche in grande con un leggero effetto Ken Burns, tipografia condensata e maiuscola per i titoli, colori usati solo per dire qualcosa.
+Il file è `src/styles/v4.css` ed è l'unico foglio di stile dell'app. Sostituisce il design "cinematic" della 3.0.
 
-## Colore (token in `src/styles/app.css`)
+## Principi
 
-| Token | Valore | Ruolo |
+- Tema scuro elegante, con superfici grafite e un solo accento caldo.
+- Niente neon e niente titoli enormi.
+- Uso con una mano:
+  - azioni principali in basso, nella metà raggiungibile dal pollice;
+  - aree di tocco di almeno 44 px;
+  - barra di navigazione fissa in basso.
+- Ogni pulsante fa qualcosa di reale. Se una funzione non è disponibile (ad esempio offline o nell'anteprima), l'app lo dice.
+
+## Colori
+
+| Token | Valore | Uso |
 |---|---|---|
-| `--bg` / `--surface*` | #0a0a0b → #26262b | Fondo e livelli delle card |
-| `--action` | #d4ff3a (lime) | Azioni primarie (Inizia, Salva, Riproduci) |
-| `--data` | #4fd1ff (ciano) | Numeri e grafici |
-| `--progress` | #ffb547 (ambra) | Progressi, record, avvisi |
-| `--wrong` / `--right` | #ff4d5a / #2ee59d | Errore tecnico → correzione (sempre con icona ed etichetta, mai solo colore) |
-| Accento per giornata | lime, arancio, ciano, viola | Upper A, Lower A, Upper B, Lower B (barra laterale, calendario) |
-
-Solo tema scuro, scelto deliberatamente (luce della palestra, schermi OLED, video al centro). Contrasto dei colori dati ≥ 3:1 sul fondo verificato con lo script di validazione della palette.
+| `--bg` | `#0b0c0f` | Sfondo |
+| `--s1` / `--s2` / `--s3` | `#15171c` / `#1b1e25` / `#252932` | Superfici: card, campi, pulsanti secondari |
+| `--t1` / `--t2` / `--t3` | Testo primario / secondario / terziario | Contrasto AA su `--s1` |
+| `--accent` | `#ff6b35` | Azione principale, tab attiva |
+| `--ok` | verde | Serie e allenamento completati, correzione ✅ |
+| `--bad` | rosso | Errore ❌, giorno saltato |
+| `--data` | blu | Numeri e grafici |
+| `--warn` | ambra | Spostamenti, avvisi |
+| `--day` | Colore del giorno (4 accenti dalla scheda) | Solo puntini ed etichette, mai grandi superfici |
 
 ## Tipografia
 
-- **Archivo Variable** (asse larghezza 62–125%): titoli condensati in maiuscolo, etichette espanse con spaziatura ampia.
-- **Inter Variable**: testo e numeri (cifre tabellari per pesi e tempi).
-- Self-hosted, solo sottoinsieme latino (nessuna richiesta a servizi esterni).
+- **Manrope** per titoli e numeri grandi; **Inter** per testo e tabelle (cifre tabulari). Entrambi i font sono self-hosted e funzionano offline.
+- Scala tipografica: 30 (display, solo nella card di oggi) · 24 · 19 · 16 · 13,5 · 12.
+- Etichette in maiuscoletto a 12 px con spaziatura aumentata.
 
 ## Componenti
 
-Hero fotografico con gradiente e crediti, card giornata con barra colorata, righe esercizio con miniatura del video, player video 16:9 con facciata “clicca per caricare” e controlli esterni (play/pausa, ricomincia, loop, 0,25×–1×), selettore segmentato, stepper serie (kg, ripetizioni, spunta da 52 px), pillola timer, schede di errore con figura schematica che passa dal rosso al verde, grafici SVG con tooltip al tocco e vista tabella, fogli modali dal basso, toast.
+Tutti i componenti sono in `src/v4/kit.tsx` e `src/v4/Shell.tsx`.
+
+| Componente | Nome nel codice |
+|---|---|
+| Barra superiore | `AppBar` / `NavBar` |
+| Sezioni | `Section` |
+| Pannelli a scomparsa | `Acc` (`<details>` nativo) |
+| Controllo segmentato | `Seg` |
+| Interruttore | `Switch` |
+| Avvisi | `Notice` |
+| Stati vuoti | `Empty` |
+| Fogli dal basso | `Sheet`, `Confirm` |
+| Notifiche brevi | `toast` |
+| Barra di navigazione | `TabBar` (Oggi · Allenamenti · Calendario · Progressi · Profilo) |
+| Barra del recupero | `RestBar` |
+| Video | `Player`: 9:16, controlli sotto il video |
+| Settimana | `WeekStrip` |
+| Card di un giorno della scheda | `.plan-card` |
+| Riga esercizio | `.ex-row` |
+| Riquadro statistica | `.stat` |
+| Tabella delle serie | `.set-r` |
+| Errore e correzione | `.fault` (❌ rosso / ✅ verde) |
 
 ## Movimento
 
-Dissolvenza all’ingresso delle schermate, scorrimento leggero dei blocchi, Ken Burns sulle foto, pulsazione del pulsante play, microinterazione di pressione (scala 0,97) sui pulsanti. Tutto disattivato con `prefers-reduced-motion: reduce`. Nessuna animazione blocca l’interazione.
+Dissolvenza di 0,3 s all'ingresso delle pagine. I fogli dal basso e la barra del recupero salgono dal basso. Con `prefers-reduced-motion` le animazioni sono ridotte.
 
 ## iPhone
 
-`viewport-fit=cover`, safe area su tutti i lati (Dynamic Island in alto, indicatore Home in basso), barra di navigazione inferiore con sfocatura, target di tocco ≥ 44 px (verificati ≥ 32 px in modo automatico su ogni schermata), campi a 16 px (niente zoom automatico di Safari), layout testato a 320, 393 e 1280 px.
+- Safe area gestita in alto e in basso.
+- `viewport-fit=cover`.
+- Campi di testo a 16 px, per evitare lo zoom automatico di Safari.
+- Testato a 393 px (iPhone 14 Pro), 320–375 px (iPhone SE) e 1280 px (desktop).

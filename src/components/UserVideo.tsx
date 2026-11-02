@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, Check, Circle, MoveUpRight, Pause, Pencil, Play, Plus, Slash, Trash2, X } from 'lucide-react';
 import { deleteMedia, getMedia, saveMedia, uid, type MediaItem, type Marker, type Shape } from '../lib/db';
 import { EXERCISE_BY_ID } from '../data/exercises';
-import { ConfirmSheet, toast } from './ui';
+import { Confirm as ConfirmSheet, toast } from '../v4/kit';
 
 const RED = '#ff3b47';
 const GREEN = '#22e08a';

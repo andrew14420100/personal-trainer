@@ -23,6 +23,8 @@ export interface Settings {
   videoReviews: Record<string, { status: 'approvato' | 'non adatto'; date: string }>;
   /** Video / animation preferences. */
   video: { autoplay: boolean; labels: boolean; speed: number; defaultMode: 'quick' | 'errors' };
+  /** Rescheduled workouts: original planned date → new date (yyyy-mm-dd). */
+  moves: Record<string, string>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -37,6 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   notes: {},
   videoReviews: {},
   video: { autoplay: true, labels: true, speed: 1, defaultMode: 'quick' },
+  moves: {},
 };
 
 export async function loadSettings(): Promise<Settings> {

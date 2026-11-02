@@ -1,3 +1,91 @@
+# Rapporto di verifica — FORMA LAB 4.0
+
+Data: 2026-11-02 · build di produzione, Chromium (Playwright) con emulazione iPhone 14 Pro, iPhone SE e desktop 1280 px.
+
+## Esito
+
+| Verifica | Esito |
+|---|---|
+| `tsc` (type-check completo) | ✅ nessun errore |
+| Test unitari (`npm test`) | ✅ 57/57 (scheda, calendario settimanale con anni bisestili, cambio anno e ora legale, migrazione 4.0, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
+| Test end-to-end (`npm run test:e2e`) | ✅ 130/130 |
+| Build di produzione + service worker | ✅ |
+
+## Contenuto dei test end-to-end
+
+**Migrazione dalla 3.0** (database creato nel vecchio formato):
+- rapporto verificato e copia `backup:pre-4.0` presente;
+- nome, nota dell'esercizio, ultimo carico e riepilogo della seduta invariati;
+- un secondo avvio non sovrascrive la copia.
+
+**Home:**
+- allenamento di oggi con nome chiaro;
+- settimana da lunedì con 7 giorni e oggi evidenziato;
+- navigazione alla settimana successiva e ritorno.
+
+**Allenamenti:**
+- 4 card con i nomi richiesti;
+- **26 posizioni** sommando i 4 giorni;
+- anatomia e pulsante di avvio in ogni giorno.
+
+**Esercizio:**
+- gruppo e nome in alto;
+- player presente;
+- con YouTube irraggiungibile compare il link alla fonte o la copertina;
+- **comandi sotto il video, non sovrapposti**;
+- 5 o più sezioni a scomparsa;
+- errori ❌ e correzioni ✅.
+
+**Allenamento:**
+- inserimento carico e ripetizioni, spunta della serie;
+- recupero automatico con +15 s e "salta";
+- pausa e ripresa;
+- **dati conservati dopo il ricaricamento**;
+- esercizio successivo e precedente;
+- chiusura con RPE e riepilogo salvato;
+- giorno segnato come completato in Home.
+
+**Calendario:**
+- vista settimana;
+- vista mese con navigazione e **passaggio d'anno**;
+- griglia da lunedì;
+- **spostamento** di una seduta (marcatore "spostato") e **ripristino**.
+
+**Progressi:**
+- grafici reali;
+- grafico del carico per esercizio;
+- storico.
+
+**Profilo:**
+- link di uscita;
+- copia pre-4.0 visibile;
+- **esportazione del backup** con 2 sessioni.
+
+**Offline (service worker):**
+- la scheda si apre;
+- la guida tecnica è disponibile;
+- il video mostra il messaggio offline;
+- lo storico locale è leggibile.
+
+**In ogni schermata:**
+- nessuno scorrimento orizzontale;
+- tutti i controlli hanno un nome accessibile;
+- aree di tocco ≥ 30 px (gli interruttori sono alti 30 px, dentro righe da 56 px).
+
+## Corretti durante lo sviluppo
+
+- La barra dei comandi del video in modalità compatta era più larga del video: ora si adatta.
+- Il pulsante "Termina" nel foglio dell'elenco esercizi poteva finire coperto dalla lista sugli schermi piccoli: ora è in alto nel foglio.
+
+## Non eseguibili qui (da fare sul tuo iPhone)
+
+- **Safari/WebKit reale e app installata in Home:** non disponibili in questo ambiente. L'emulazione usa Chromium.
+- **Riproduzione YouTube** dentro la PWA su iPhone (autoplay muto inline): da verificare sul dispositivo.
+- **Suono e vibrazione a fine recupero**, e **schermo sempre acceso**.
+- **Accesso con PIN sul sito pubblicato:** il middleware è coperto dai test unitari e dal test locale con Wrangler della 3.0, ma l'anteprima 4.0 su Cloudflare va pubblicata da te (vedi PUBBLICAZIONE.md).
+
+---
+
 # Aggiornamento — nomi chiari, anatomia, video reali
 
 | Verifica | Esito |

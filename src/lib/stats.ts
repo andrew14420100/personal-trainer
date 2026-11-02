@@ -24,7 +24,14 @@ export function sessionReps(s: Session): number {
 
 export function sessionDurationMin(s: Session): number {
   if (!s.endedAt) return 0;
-  return Math.max(1, Math.round((s.endedAt - s.startedAt) / 60000));
+  return Math.max(1, Math.round((s.endedAt - s.startedAt - (s.pausedMs ?? 0)) / 60000));
+}
+
+/** Active (not paused) elapsed time of a running session, in ms. */
+export function activeElapsed(s: Session, now = Date.now()): number {
+  const end = s.endedAt ?? now;
+  const pausing = s.pausedAt ? end - s.pausedAt : 0;
+  return Math.max(0, end - s.startedAt - (s.pausedMs ?? 0) - pausing);
 }
 
 export const completed = (sessions: Session[]) => sessions.filter((s) => s.status === 'completed').sort((a, b) => a.startedAt - b.startedAt);

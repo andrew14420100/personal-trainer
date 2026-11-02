@@ -9,12 +9,12 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <main className="screen">
+      <main className="page bare">
         <div className="brand" style={{ marginBottom: 20 }}>
           FORMA<b>·</b>LAB
         </div>
-        <h1 className="display h2">Qualcosa non ha funzionato</h1>
-        <p className="text-2" style={{ marginTop: 10 }}>
+        <h1 className="t-h1">Qualcosa non ha funzionato</h1>
+        <p className="c2" style={{ marginTop: 10 }}>
           I tuoi dati sono salvati sul dispositivo e non sono stati toccati. Prova a ricaricare; se l’errore resta, inviami il testo qui sotto.
         </p>
         <pre className="card tight flat small" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 14 }}>

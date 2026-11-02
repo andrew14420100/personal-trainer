@@ -14,7 +14,7 @@ export function VideoReview({ youtubeId }: { youtubeId: string }) {
       return { ...s, videoReviews: v };
     });
   return (
-    <div className="row wrap small" style={{ marginTop: 8, gap: 8 }}>
+    <div className="row wrap t-xs" style={{ marginTop: 8, gap: 8 }}>
       {r ? (
         <>
           <span className={`chip ${r.status === 'approvato' ? 'ok' : 'bad'}`}>
@@ -26,7 +26,7 @@ export function VideoReview({ youtubeId }: { youtubeId: string }) {
         </>
       ) : (
         <>
-          <span className="muted">
+          <span className="c3" style={{ flexBasis: '100%' }}>
             <AlertTriangle size={13} style={{ verticalAlign: '-2px' }} /> Contenuto non ancora revisionato da te:
           </span>
           <button className="btn sm" onClick={() => set('approvato')}>

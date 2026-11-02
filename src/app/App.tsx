@@ -1,31 +1,37 @@
 import { useEffect } from 'react';
 import { useRoute } from '../lib/router';
+import { ensureMigration } from '../lib/migration';
 import { useData } from './store';
-import { TabBar, TimerPill } from '../components/Shell';
-import { ToastHost, Notice } from '../components/ui';
-import { Home } from '../screens/Home';
-import { Program, DayScreen, NotFound } from '../screens/Program';
-import { ExerciseDetail } from '../screens/ExerciseDetail';
-import { Workout } from '../screens/Workout';
-import { Summary } from '../screens/Summary';
-import { Progress } from '../screens/Progress';
-import { Videos } from '../screens/Videos';
-import { Settings } from '../screens/Settings';
-import { Calendar } from '../screens/Calendar';
+import { Home } from '../v4/Home';
+import { Plan, DayView } from '../v4/Plan';
+import { Exercise } from '../v4/Exercise';
+import { Workout } from '../v4/Workout';
+import { SessionView } from '../v4/SessionView';
+import { Calendar } from '../v4/Calendar';
+import { Progress } from '../v4/Progress';
+import { Profile } from '../v4/Profile';
+import { Videos } from '../v4/Videos';
+import { RestBar, TabBar } from '../v4/Shell';
+import { Empty, Notice, ToastHost } from '../v4/kit';
 import { UpdatePrompt } from '../components/UpdatePrompt';
 import { PreviewBar } from '../preview/PreviewBar';
+import { navigate } from '../lib/router';
 import type { DayId } from '../data/types';
+import { Compass } from 'lucide-react';
+
+// Old 2.0/3.0 paths kept working (bookmarks, installed app history).
+const ALIASES: Record<string, string> = { scheda: 'allenamenti', impostazioni: 'profilo', riepilogo: 'sessione', video: 'videoteca' };
 
 export function App() {
   const { path, query } = useRoute();
   const data = useData();
-  const root = path[0] ?? '';
+  const root = ALIASES[path[0] ?? ''] ?? path[0] ?? '';
   const inWorkout = root === 'allenamento';
 
   useEffect(() => {
-    // Ask the browser to keep local data (best effort; Home Screen apps on iOS are already exempt
-    // from Safari's 7-day storage cap).
     navigator.storage?.persist?.().catch(() => {});
+    // Verified safety copy of the previous version's data before the first 4.0 use (never deletes anything).
+    ensureMigration().catch(() => {});
   }, []);
 
   let screen: JSX.Element;
@@ -33,36 +39,47 @@ export function App() {
     case '':
       screen = <Home />;
       break;
-    case 'scheda':
-      screen = <Program />;
+    case 'allenamenti':
+      screen = <Plan />;
       break;
     case 'giorno':
-      screen = <DayScreen dayId={path[1] as DayId} />;
+      screen = <DayView dayId={path[1] as DayId} />;
       break;
     case 'esercizio':
-      screen = <ExerciseDetail id={path[1]} slotId={query.get('slot') ?? undefined} />;
+      screen = <Exercise id={path[1]} slotId={query.get('slot') ?? undefined} />;
       break;
     case 'allenamento':
       screen = <Workout />;
       break;
-    case 'riepilogo':
     case 'sessione':
-      screen = <Summary id={path[1]} />;
-      break;
-    case 'progressi':
-      screen = <Progress />;
-      break;
-    case 'video':
-      screen = <Videos />;
+      screen = <SessionView id={path[1]} justFinished={query.get('fine') === '1'} />;
       break;
     case 'calendario':
       screen = <Calendar />;
       break;
-    case 'impostazioni':
-      screen = <Settings />;
+    case 'progressi':
+      screen = <Progress />;
+      break;
+    case 'profilo':
+      screen = <Profile />;
+      break;
+    case 'videoteca':
+      screen = <Videos />;
       break;
     default:
-      screen = <NotFound />;
+      screen = (
+        <main className="page">
+          <Empty
+            icon={<Compass size={22} />}
+            title="Pagina non trovata"
+            action={
+              <button className="btn primary" onClick={() => navigate('/', { replace: true })}>
+                Vai a Oggi
+              </button>
+            }
+          />
+        </main>
+      );
   }
 
   return (
@@ -70,14 +87,12 @@ export function App() {
       {__PREVIEW__ && !inWorkout && <PreviewBar />}
       {data.error && (
         <div style={{ padding: 'calc(var(--safe-t) + 12px) 16px 0', maxWidth: 560, margin: '0 auto' }}>
-          <Notice>
-            Archivio locale non disponibile: {data.error}. In navigazione privata o con i dati dei siti bloccati i dati non possono essere salvati.
-          </Notice>
+          <Notice>Archivio locale non disponibile: {data.error}. In navigazione privata o con i dati dei siti bloccati i dati non possono essere salvati.</Notice>
         </div>
       )}
       <div key={root + (path[1] ?? '')}>{screen}</div>
       {!inWorkout && <TabBar />}
-      <TimerPill inWorkout={inWorkout} />
+      <RestBar inWorkout={inWorkout} />
       <ToastHost />
       <UpdatePrompt />
     </div>

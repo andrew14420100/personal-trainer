@@ -45,6 +45,9 @@ export interface Session {
   /** Session RPE 1–10 (perceived difficulty). */
   rpe?: number | null;
   note?: string;
+  /** Pause support (4.0): when the session was paused, and total paused time in ms. */
+  pausedAt?: number | null;
+  pausedMs?: number;
 }
 
 export interface Measurement {

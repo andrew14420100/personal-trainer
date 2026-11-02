@@ -93,3 +93,22 @@ describe('concurrent workout writes', () => {
     expect(saved!.exercises[0].sets[0]).toMatchObject({ weight: 27.5, reps: 10, done: true });
   });
 });
+
+describe('4.0 migration', () => {
+  it('keeps every previous record and stores a verified safety copy, idempotently', async () => {
+    const { ensureMigration } = await import('../../src/lib/migration');
+    const { kvGet, listSessions } = await import('../../src/lib/db');
+    const s = buildSession('upper-a', DEFAULT_SETTINGS, false, []);
+    s.status = 'completed';
+    await saveSession(s);
+    await saveMeasurement({ id: 'm1', date: '2026-10-01', bodyWeight: 80 });
+    const r = await ensureMigration();
+    expect(r?.verified).toBe(true);
+    expect(r?.sessions).toBe(1);
+    expect((await listSessions())[0].id).toBe(s.id); // untouched
+    const copy = await kvGet<{ data: { sessions: { id: string }[] } }>('backup:pre-4.0');
+    expect(copy?.data.sessions[0].id).toBe(s.id);
+    const again = await ensureMigration();
+    expect(again?.sessions).toBe(1);
+  });
+});

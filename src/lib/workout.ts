@@ -75,7 +75,20 @@ export function removeSet(s: Session, exIdx: number, setIdx: number): Session {
 }
 
 export async function finishSession(id: string, extra: { rpe?: number | null; note?: string }): Promise<Session | undefined> {
-  return mutate(id, (s) => ({ ...s, ...extra, status: 'completed', endedAt: s.endedAt ?? Date.now() }));
+  return mutate(id, (s) => {
+    const now = Date.now();
+    const pausedMs = (s.pausedMs ?? 0) + (s.pausedAt ? now - s.pausedAt : 0);
+    return { ...s, ...extra, pausedAt: null, pausedMs, status: 'completed', endedAt: s.endedAt ?? now };
+  });
+}
+
+/** Pause or resume the running session (paused time is excluded from the duration). */
+export function togglePause(id: string): Promise<Session | undefined> {
+  return mutate(id, (s) => {
+    const now = Date.now();
+    if (s.pausedAt) return { ...s, pausedMs: (s.pausedMs ?? 0) + (now - s.pausedAt), pausedAt: null };
+    return { ...s, pausedAt: now };
+  });
 }
 
 export const discardSession = (id: string) => deleteSession(id);

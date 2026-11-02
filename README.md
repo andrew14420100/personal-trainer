@@ -1,18 +1,20 @@
-# FORMA LAB 3.0
+# FORMA LAB 4.0
 
-Applicazione personale di allenamento per iPhone: PWA installabile dalla schermata Home, privata, offline dove possibile, gratuita.
+Applicazione personale di allenamento: PWA privata e gratuita, installabile su iPhone e PC, con le funzioni locali disponibili anche offline. La 4.0 ricostruisce da zero interfaccia e navigazione. Restano invariati i dati, la scheda e la protezione d'accesso.
 
 | | |
 |---|---|
-| **Scheda** | 4 giorni con nomi chiari: G1 Petto, schiena e braccia (Upper A) · G2 Gambe: quadricipiti e femorali (Lower A) · G3 Petto alto, schiena e spalle (Upper B) · G4 Glutei e gambe (Lower B) — 26 posizioni, 25 esercizi, mappa anatomica per giornata ed esercizio |
-| **Video** | Video brevi di atleti reali (YouTube Shorts) per tutti i 25 esercizi, quasi tutti con ❌/✅ sul video, avvio muto e in loop — [docs/VIDEO_REALI.md](docs/VIDEO_REALI.md). In più: i tuoi video annotabili, schemi tecnici animati (non sono video), tutorial esterni |
-| **Tecnica** | Pagina completa per ogni esercizio: preparazione, esecuzione, respirazione, errori in ROSSO → correzioni in VERDE, alternative |
-| **Allenamento** | Un esercizio alla volta, carichi/ripetizioni/RIR/tecnica/note, timer di recupero automatico, riepilogo con confronti |
-| **Progressi** | Storico, grafici interattivi, calendario, confronti settimanali, misure corporee, suggerimenti di progressione |
-| **Dati** | Solo sul dispositivo (IndexedDB). Backup cifrato AES-256, importazione, cancellazione totale |
-| **Accesso** | Middleware Cloudflare Pages: PIN personale, oppure passphrase + codice temporaneo TOTP, oppure Cloudflare Access (email + OTP) |
+| **Oggi** | Allenamento del giorno: nome chiaro, foto, muscoli, durata, esercizi, stato e pulsante "Inizia allenamento". Settimana da lunedì, progressi della settimana, ultimo allenamento, storico, scheda, traguardi (solo dati reali) |
+| **Allenamenti** | 4 giorni: Lunedì *Petto, schiena e braccia* · Martedì *Gambe: quadricipiti e femorali* · Giovedì *Petto alto, schiena e spalle* · Venerdì *Glutei e gambe*. 26 posizioni, 25 esercizi. Ogni giorno ha anatomia, serie/ripetizioni/recupero, durata e stato |
+| **Esercizio** | Video reale grande in alto. Sotto: muscoli e anatomia, serie, recupero, ultimo carico, tecnica a scomparsa (regolazione, esecuzione, errori ❌ e correzioni ✅, alternative), grafico personale, storico, note |
+| **Allenamento** | Tabella serie *prec. · kg · rip · ✓*, recupero automatico (±15 s, pausa, salta), pausa della seduta, note/tecnica/RIR, avanti/indietro, chiusura con RPE |
+| **Calendario** | Settimana e mese con stati completato / programmato / saltato / spostato. Sposta una seduta o ripristinala; naviga tra settimane, mesi e anni |
+| **Progressi** | Carico, ripetizioni, volume, frequenza, serie per settimana, confronto settimanale, RPE, 1RM stimato, storico, misure |
+| **Video** | 49 Shorts di atleti reali, player ufficiale YouTube con controls=0, avvio muto e loop, comandi sotto il video — [docs/VIDEO_4.0.md](docs/VIDEO_4.0.md) |
+| **Dati** | Solo sul dispositivo (IndexedDB). Backup cifrato AES-256, ripristino, copia di sicurezza verificata della versione precedente — [docs/MIGRAZIONE_4.0.md](docs/MIGRAZIONE_4.0.md) |
+| **Accesso** | Middleware Cloudflare Pages: PIN personale, passphrase + TOTP, oppure Cloudflare Access |
 
-Anteprime: [`docs/screenshots/`](docs/screenshots). Anteprima interattiva in Claude: vedi la consegna (è una copia di prova, non l’app pubblicata).
+Schermate: [`docs/screenshots/`](docs/screenshots) (i file `4.0-*.png` contengono dati di prova dei test).
 
 ## Avvio rapido
 
@@ -33,15 +35,14 @@ Apre l’app in sviluppo su `http://localhost:5173` (senza autenticazione: il mi
 | Comando | Cosa fa |
 |---|---|
 | `npm run build` | Type-check + build di produzione in `dist/` (PWA con service worker) |
-| `npm test` | 57 test unitari (scheda vs brief, animazioni, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
-| `npm run test:e2e` | Test end-to-end Playwright sulla build (viewport iPhone 14 Pro, iPhone SE, desktop; offline; backup) |
+| `npm test` | 57 test unitari (scheda, calendario, migrazione 4.0, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
+| `npm run test:e2e` | 130 controlli end-to-end Playwright sulla build (iPhone 14 Pro, iPhone SE, desktop; migrazione, calendario, registro, offline, backup) |
 | `npm run verify:videos` | Riverifica i tutorial esterni e rigenera `docs/VERIFICA_VIDEO.md` |
 | `npx vite-node scripts/verify-real-videos.ts` | Riverifica i video reali e rigenera `docs/VIDEO_REALI.md` |
 | `npm run totp:new` | Genera passphrase, segreto TOTP e chiave di sessione per l’accesso privato |
 | `npm run build:preview` | Build a file singolo per l’anteprima in Claude (`dist-preview/`) |
 | `npm run deploy` | Build + pubblicazione su Cloudflare Pages con Wrangler |
 | `npm run icons` | Rigenera le icone PNG da `public/icons/icon.svg` |
-| `node scripts/export-animations.mjs out <id…>` | Esporta animazioni in MP4 H.264 (con `npx vite --port 5190` attivo) |
 
 I test e2e e lo script delle icone usano Playwright con Chromium (`npm i -D playwright` se non è già disponibile nel sistema).
 
@@ -49,35 +50,38 @@ I test e2e e lo script delle icone usano Playwright con Chromium (`npm i -D play
 
 ```
 src/
-  app/          App, routing delle schermate, store reattivo sui dati locali
-  anim/         motore delle animazioni tecniche: rig cinematico, renderer, timeline A·B·C·D, libreria 25 scene
-  components/   UI, MediaHero, UserVideo (video personali annotati), VideoPlayer (YouTube), BodyMap, Charts, Technique, Shell
-  screens/      Home, Program/Day, ExerciseDetail, Workout, Summary, Progress, Calendar, Videos, Settings
-  data/         program.ts (scheda), exercises.ts (contenuti tecnici), videos.ts (videoteca + verifica), media.ts (foto e licenze)
-  lib/          db (IndexedDB), workout (registro), stats, progression, plan (calibrazione/override), timer,
-                backup (export/import cifrato), settings, router, wakelock, format
+  app/          App (routing), store reattivo sui dati locali
+  v4/           interfaccia 4.0: kit (componenti), Shell (tab bar, recupero), Player (YouTube), Week,
+                Home, Plan (Allenamenti + giorno), Exercise, Workout, SessionView, Calendar, Progress, Profile, Videos
+  components/   Anatomy, Charts, UserVideo (video personali annotati), VideoReview, UpdatePrompt, ErrorBoundary
+  data/         program.ts (scheda), exercises.ts (tecnica), muscles.ts, realVideos.ts (video reali), videos.ts (tutorial esterni), media.ts (foto)
+  lib/          db (IndexedDB), migration (copia verificata pre-4.0), schedule (calendario e spostamenti), workout, stats,
+                progression, plan, timer, backup, settings, router, wakelock, format
   preview/      solo anteprima Claude: banner e dati d’esempio marcati
-  sw.ts         service worker (Workbox): precache, navigazioni network-first, cache miniature
-  styles/       design system (token, componenti, animazioni, reduced-motion)
+  sw.ts         service worker (Workbox)
+  styles/v4.css design system 4.0
 functions/      middleware Cloudflare Pages (autenticazione, header di sicurezza)
 tests/unit      Vitest        tests/e2e   Playwright
 scripts/        icone, verifica video, generazione segreti, anteprima
-docs/           analisi, pubblicazione, privacy, verifica video, rapporto test, screenshot
+docs/           ricerca, design, migrazione, video, pubblicazione, privacy, rapporto test, screenshot
 ```
 
 ## Documentazione
 
+- [docs/RICERCA_4.0.md](docs/RICERCA_4.0.md) — confronto Hevy, Fitbod, Strong, Alpha Progression ed elementi adottati
+- [docs/DESIGN.md](docs/DESIGN.md) — design system 4.0
+- [docs/MIGRAZIONE_4.0.md](docs/MIGRAZIONE_4.0.md) — conservazione e verifica dei dati della versione precedente
+- [docs/VIDEO_4.0.md](docs/VIDEO_4.0.md) — player video, limiti di YouTube, varianti
 - [docs/ANALISI.md](docs/ANALISI.md) — stato iniziale, decisioni, incongruenze della scheda
-- [docs/DESIGN.md](docs/DESIGN.md) — design system “cinematic”
 - [docs/PUBBLICAZIONE.md](docs/PUBBLICAZIONE.md) — pubblicazione privata su HTTPS e installazione su iPhone, passo per passo
 - [docs/PRIVACY.md](docs/PRIVACY.md) — dove sono i dati, accesso, backup
 - [docs/VIDEO_REALI.md](docs/VIDEO_REALI.md) — video reali scelti per ogni esercizio, con scheda di verifica
-- [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) — analisi dei video di riferimento, schemi animati, video personali
+- [docs/VIDEO_3.0.md](docs/VIDEO_3.0.md) — (storico 3.0) analisi dei video di riferimento; gli schemi animati sono stati rimossi nella 4.0
 - [docs/VERIFICA_VIDEO.md](docs/VERIFICA_VIDEO.md) — scheda di verifica dei riferimenti YouTube
 - [docs/RAPPORTO_TEST.md](docs/RAPPORTO_TEST.md) — verifiche superate, fallite (e corrette) e non eseguibili
 
 ## Stack e motivazioni
 
-React 18 + TypeScript + Vite; CSS con design token invece di Tailwind (nessuna dipendenza in più, controllo fine di safe area e animazioni); animazioni CSS invece di una libreria (più leggere, rispettano `prefers-reduced-motion`); grafici SVG fatti a mano (funzionano offline, ~5 KB); IndexedDB nativo; Workbox per il service worker; Lucide per le icone; font Inter e Archivo self-hosted. Hosting: Cloudflare Pages (gratuito, HTTPS, Functions per l’accesso). Nessun servizio a pagamento, nessuna API a consumo.
+React 18 + TypeScript + Vite; CSS con design token invece di Tailwind (nessuna dipendenza in più, controllo fine di safe area e animazioni); animazioni CSS invece di una libreria (più leggere, rispettano `prefers-reduced-motion`); grafici SVG fatti a mano (funzionano offline, ~5 KB); IndexedDB nativo; Workbox per il service worker; Lucide per le icone; font Manrope e Inter self-hosted. Hosting: Cloudflare Pages (gratuito, HTTPS, Functions per l’accesso). Nessun servizio a pagamento, nessuna API a consumo.
 
 Le indicazioni tecniche sono informative e non sostituiscono il parere di un medico o di un professionista dell’esercizio.

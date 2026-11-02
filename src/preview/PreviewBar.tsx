@@ -1,6 +1,6 @@
 // PREVIEW ONLY banner: makes it impossible to confuse the Claude preview with the published app.
 import { useState } from 'react';
-import { Sheet, toast } from '../components/ui';
+import { Sheet, toast } from '../v4/kit';
 import { wipeAll } from '../lib/db';
 import { loadSamples } from './samples';
 
@@ -15,7 +15,7 @@ export function PreviewBar() {
           width: '100%',
           border: 0,
           padding: 'calc(env(safe-area-inset-top, 0px) + 7px) 16px 7px',
-          background: 'var(--progress)',
+          background: 'var(--warn)',
           color: '#1a1205',
           fontWeight: 800,
           fontSize: 12,
@@ -27,13 +27,13 @@ export function PreviewBar() {
         Anteprima in Claude · non è l’app pubblicata — dettagli
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} label="Informazioni sull’anteprima">
-        <div className="stack small text-2">
-          <h3 className="display h3" style={{ color: 'var(--text)' }}>
+        <div className="col t-sm c2">
+          <h3 className="t-h2" style={{ color: 'var(--t1)' }}>
             Anteprima interattiva
           </h3>
           <p>Questa è una copia di prova dell’interfaccia, eseguita dentro Claude. Le interazioni sono reali (registro, timer, grafici, impostazioni) ma con questi limiti:</p>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>i video YouTube non possono essere incorporati qui: il player mostra il collegamento alla fonte originale;</li>
+            <li>i video YouTube potrebbero non caricarsi in questa cornice: in quel caso il player mostra il collegamento alla fonte originale;</li>
             <li>niente accesso protetto, service worker, modalità offline né installazione nella schermata Home;</li>
             <li>i dati restano solo in questo browser, separati dall’app pubblicata; esportazione e download dei backup sono bloccati;</li>
             <li>niente suoni né schermo sempre acceso garantiti.</li>
