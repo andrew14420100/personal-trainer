@@ -1,0 +1,81 @@
+import { effectiveDay } from './plan';
+import { getSession, saveSession, deleteSession, uid, type ExerciseLog, type Session, type SetLog } from './db';
+import { lastLog } from './stats';
+import type { Settings } from './settings';
+import type { DayId } from '../data/types';
+
+/** Create a new active session, pre-filling loads from the last time each exercise was done. */
+export function buildSession(dayId: DayId, settings: Settings, calibration: boolean, history: Session[], now = Date.now()): Session {
+  const slots = effectiveDay(dayId, settings, calibration);
+  const exercises: ExerciseLog[] = slots.map((s) => {
+    const prev = lastLog(history, s.exerciseId)?.log;
+    const prevWeights = prev?.sets.filter((x) => x.done).map((x) => x.weight) ?? [];
+    const sets: SetLog[] = Array.from({ length: s.todaySets }, (_, i) => ({
+      weight: prevWeights[Math.min(i, prevWeights.length - 1)] ?? null,
+      reps: null,
+      done: false,
+    }));
+    return {
+      slotId: s.id,
+      exerciseId: s.exerciseId,
+      targetSets: s.todaySets,
+      repsMin: s.repsMin,
+      repsMax: s.repsMax,
+      unit: s.unit,
+      perSide: s.perSide,
+      sets,
+      note: '',
+    };
+  });
+  return { id: uid(), dayId, startedAt: now, status: 'active', calibration, currentIndex: 0, exercises };
+}
+
+export async function startSession(dayId: DayId, settings: Settings, calibration: boolean, history: Session[]): Promise<Session> {
+  const s = buildSession(dayId, settings, calibration, history);
+  await saveSession(s);
+  return s;
+}
+
+// All session writes go through one queue: each update is applied to the freshest stored state,
+// so fast typing (blur + tap fired together) can never overwrite a value with a stale copy.
+let queue: Promise<unknown> = Promise.resolve();
+
+/** Apply an update to the latest stored copy of a session and persist it (serialized). */
+export function mutate(id: string, fn: (s: Session) => Session): Promise<Session | undefined> {
+  const run = queue.then(async () => {
+    const s = await getSession(id);
+    if (!s) return undefined;
+    const next = fn(structuredClone(s));
+    await saveSession(next);
+    return next;
+  });
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+export function updateSet(s: Session, exIdx: number, setIdx: number, patch: Partial<SetLog>): Session {
+  const log = s.exercises[exIdx];
+  log.sets[setIdx] = { ...log.sets[setIdx], ...patch };
+  if (patch.done === true) log.sets[setIdx].completedAt = Date.now();
+  if (patch.done === false) delete log.sets[setIdx].completedAt;
+  return s;
+}
+
+export function addSet(s: Session, exIdx: number): Session {
+  const log = s.exercises[exIdx];
+  const last = log.sets[log.sets.length - 1];
+  log.sets.push({ weight: last?.weight ?? null, reps: null, done: false });
+  return s;
+}
+
+export function removeSet(s: Session, exIdx: number, setIdx: number): Session {
+  const log = s.exercises[exIdx];
+  if (log.sets.length > 1) log.sets.splice(setIdx, 1);
+  return s;
+}
+
+export async function finishSession(id: string, extra: { rpe?: number | null; note?: string }): Promise<Session | undefined> {
+  return mutate(id, (s) => ({ ...s, ...extra, status: 'completed', endedAt: s.endedAt ?? Date.now() }));
+}
+
+export const discardSession = (id: string) => deleteSession(id);

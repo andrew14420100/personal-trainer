@@ -1,0 +1,567 @@
+[
+ {
+  "name": "[iphone14pro] home shows FORMA LAB brand",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] home empty state without fake stats",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro home] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro home] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro home] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro home] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] program shows 4 days",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] 26 exercise positions across the 4 days",
+  "ok": true,
+  "info": "found 26"
+ },
+ {
+  "name": "[iphone14pro day] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro day] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro day] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro day] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] exercise page has video player facade",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] exercise sections in order",
+  "ok": true,
+  "info": "PRESCRIZIONE > TECNICA > ERRORI E CORREZIONI > ALTERNATIVE > NOTE PERSONALI > STORICO PRESTAZIONI"
+ },
+ {
+  "name": "[iphone14pro] tutorial shows 5 phases",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] errors phase shows RED cards",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] correction phase shows GREEN",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] blocked video shows link to original source",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro exercise] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro exercise] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro exercise] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro exercise] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] workout mode opened",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] rest timer starts automatically",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro workout] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro workout] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro workout] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro workout] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] timer visible on other screens",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] summary shows volume",
+  "ok": true,
+  "info": "4043 kg"
+ },
+ {
+  "name": "[iphone14pro] every logged load saved exactly (no lost values)",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro summary] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro summary] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro summary] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro summary] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] history persisted after reload",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] today marked completed",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] favorite persisted",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] history list shows the session",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] charts rendered from real data",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] chart tooltip on tap",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] calendar marks the training day",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] measurement saved",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro progress] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro progress] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro progress] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro progress] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro videos] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro videos] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro videos] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro videos] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] backup export contains the session",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] wipe removes data",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] import restores data",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro settings] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro settings] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro settings] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro settings] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] app opens offline (program)",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] textual instructions offline",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphone14pro] local history offline",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] home shows FORMA LAB brand",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] home empty state without fake stats",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE home] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE home] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE home] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE home] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] program shows 4 days",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] 26 exercise positions across the 4 days",
+  "ok": true,
+  "info": "found 26"
+ },
+ {
+  "name": "[iphoneSE day] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE day] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE day] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE day] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] exercise page has video player facade",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] exercise sections in order",
+  "ok": true,
+  "info": "PRESCRIZIONE > TECNICA > ERRORI E CORREZIONI > ALTERNATIVE > NOTE PERSONALI > STORICO PRESTAZIONI"
+ },
+ {
+  "name": "[iphoneSE] tutorial shows 5 phases",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] errors phase shows RED cards",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] correction phase shows GREEN",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] blocked video shows link to original source",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE exercise] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE exercise] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE exercise] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE exercise] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] workout mode opened",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] rest timer starts automatically",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE workout] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE workout] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE workout] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE workout] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] timer visible on other screens",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] summary shows volume",
+  "ok": true,
+  "info": "4043 kg"
+ },
+ {
+  "name": "[iphoneSE] every logged load saved exactly (no lost values)",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE summary] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE summary] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE summary] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE summary] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] history persisted after reload",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] today marked completed",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] favorite persisted",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] history list shows the session",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] charts rendered from real data",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] chart tooltip on tap",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] calendar marks the training day",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE] measurement saved",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE progress] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE progress] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE progress] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[iphoneSE progress] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[desktop home] no horizontal overflow",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[desktop home] all controls have an accessible name",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[desktop home] touch targets ≥ 32px",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "[desktop home] screen not empty",
+  "ok": true,
+  "info": ""
+ },
+ {
+  "name": "no uncaught page errors",
+  "ok": true,
+  "info": ""
+ }
+]
