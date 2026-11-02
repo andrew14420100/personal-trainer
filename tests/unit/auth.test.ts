@@ -92,9 +92,39 @@ describe('middleware', () => {
     const body = new URLSearchParams({ password: 'x', code: '123456' });
     const r = await onRequest(ctx(new Request(ORIGIN + '/__auth/login', { method: 'POST', body, headers: { Origin: 'https://evil.example' } })));
     expect(r.status).toBe(403);
+    const r2 = await onRequest(ctx(new Request(ORIGIN + '/__auth/login', { method: 'POST', body, headers: { 'Sec-Fetch-Site': 'cross-site' } })));
+    expect(r2.status).toBe(403);
   });
   it('access mode rejects requests without a valid Access JWT', async () => {
     const r = await onRequest(ctx(nav('/'), { AUTH_MODE: 'access', AUTH_ACCESS_TEAM_DOMAIN: 'team.cloudflareaccess.com', AUTH_ACCESS_AUD: 'aud' }));
     expect(r.status).toBe(403);
+  });
+});
+
+describe('Cloudflare Access JWT', () => {
+  it('accepts a correctly signed token for the right audience and rejects tampering', async () => {
+    const { verifyAccessJwt, b64url, _resetAccessCache } = await import('../../functions/lib/auth');
+    _resetAccessCache();
+    const kp = (await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify'])) as CryptoKeyPair;
+    const jwk = (await crypto.subtle.exportKey('jwk', kp.publicKey)) as JsonWebKey;
+    const team = 'team.cloudflareaccess.com';
+    const env = { AUTH_MODE: 'access', AUTH_ACCESS_TEAM_DOMAIN: team, AUTH_ACCESS_AUD: 'my-aud' };
+    const enc = (o: unknown) => b64url(new TextEncoder().encode(JSON.stringify(o)));
+    const sign = async (payload: object) => {
+      const h = enc({ alg: 'RS256', kid: 'k1', typ: 'JWT' });
+      const p = enc(payload);
+      const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', kp.privateKey, new TextEncoder().encode(`${h}.${p}`));
+      return `${h}.${p}.${b64url(sig)}`;
+    };
+    const fakeFetch = (async () => new Response(JSON.stringify({ keys: [{ ...jwk, kid: 'k1' }] }))) as unknown as typeof fetch;
+    const now = Date.now();
+    const good = await sign({ aud: ['my-aud'], iss: `https://${team}`, exp: now / 1000 + 600, email: 'me@example.com' });
+    expect(await verifyAccessJwt(good, env, fakeFetch, now)).toBe(true);
+    expect(await verifyAccessJwt(await sign({ aud: ['other'], iss: `https://${team}`, exp: now / 1000 + 600 }), env, fakeFetch, now)).toBe(false);
+    expect(await verifyAccessJwt(await sign({ aud: ['my-aud'], iss: `https://${team}`, exp: now / 1000 - 1 }), env, fakeFetch, now)).toBe(false);
+    expect(await verifyAccessJwt(await sign({ aud: ['my-aud'], iss: 'https://evil.cloudflareaccess.com', exp: now / 1000 + 600 }), env, fakeFetch, now)).toBe(false);
+    const parts = good.split('.');
+    const tampered = `${parts[0]}.${enc({ aud: ['my-aud'], iss: `https://${team}`, exp: now / 1000 + 6000 })}.${parts[2]}`;
+    expect(await verifyAccessJwt(tampered, env, fakeFetch, now)).toBe(false);
   });
 });

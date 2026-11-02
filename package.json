@@ -7,14 +7,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.sw.json && vite build",
-    "build:preview": "vite build --mode preview",
+    "build:preview": "vite build --mode preview && node scripts/make-preview.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.sw.json",
     "test": "vitest run",
     "test:e2e": "node tests/e2e/run.mjs",
-    "verify:videos": "node scripts/verify-videos.mjs",
+    "verify:videos": "vite-node scripts/verify-videos.ts",
     "icons": "node scripts/make-icons.mjs",
-    "totp:new": "node scripts/totp-setup.mjs"
+    "totp:new": "node scripts/totp-setup.mjs",
+    "deploy": "npm run build && npx wrangler pages deploy"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

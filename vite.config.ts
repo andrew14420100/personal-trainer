@@ -20,7 +20,15 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       preview
-        ? viteSingleFile()
+        ? [
+            viteSingleFile(),
+            {
+              // No service worker in the preview: stub the PWA registration module.
+              name: 'stub-pwa-register',
+              resolveId: (id: string) => (id === 'virtual:pwa-register' ? '\0pwa-stub' : null),
+              load: (id: string) => (id === '\0pwa-stub' ? 'export function registerSW() { return () => {}; }' : null),
+            },
+          ]
         : VitePWA({
             registerType: 'prompt',
             injectRegister: false,
@@ -50,7 +58,6 @@ export default defineConfig(({ mode }) => {
             filename: 'sw.ts',
             injectManifest: {
               globPatterns: ['**/*.{js,css,html,woff2,jpg,png,svg}'],
-              globIgnores: ['**/*vietnamese*', '**/*cyrillic*', '**/*greek*', '**/*-italic-*', '**/*-standard-*'],
             },
           }),
     ],

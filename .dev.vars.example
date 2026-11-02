@@ -1,0 +1,5 @@
+# Copy to .dev.vars (git-ignored) to test the login locally with: npx wrangler pages dev
+AUTH_MODE=totp
+AUTH_PASSWORD=change-me-long-passphrase
+AUTH_TOTP_SECRET=JBSWY3DPEHPK3PXP
+AUTH_SESSION_SECRET=change-me-at-least-32-characters-long-random

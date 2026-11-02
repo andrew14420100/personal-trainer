@@ -12,6 +12,7 @@ import { Progress } from '../screens/Progress';
 import { Videos } from '../screens/Videos';
 import { Settings } from '../screens/Settings';
 import { UpdatePrompt } from '../components/UpdatePrompt';
+import { PreviewBar } from '../preview/PreviewBar';
 import type { DayId } from '../data/types';
 
 export function App() {
@@ -62,6 +63,7 @@ export function App() {
 
   return (
     <div className="app">
+      {__PREVIEW__ && !inWorkout && <PreviewBar />}
       {data.error && (
         <div style={{ padding: 'calc(var(--safe-t) + 12px) 16px 0', maxWidth: 560, margin: '0 auto' }}>
           <Notice>

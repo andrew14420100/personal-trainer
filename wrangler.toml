@@ -1,0 +1,6 @@
+# Cloudflare Pages project configuration (free plan).
+# Deploy: npm run build && npx wrangler pages deploy
+# Secrets are NOT stored here: set them in the dashboard or with `npx wrangler pages secret put NAME`.
+name = "forma-lab"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"

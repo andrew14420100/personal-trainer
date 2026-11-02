@@ -30,7 +30,7 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://i.ytimg.com",
   "font-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://i.ytimg.com", // the service worker caches video thumbnails
   'frame-src https://www.youtube-nocookie.com https://www.youtube.com',
   "worker-src 'self'",
   "manifest-src 'self'",
@@ -45,7 +45,9 @@ function secure(res: Response, extra: Record<string, string> = {}): Response {
   r.headers.set('Content-Security-Policy', CSP);
   r.headers.set('X-Content-Type-Options', 'nosniff');
   r.headers.set('X-Frame-Options', 'DENY');
-  r.headers.set('Referrer-Policy', 'no-referrer');
+  // same-origin: no referrer ever leaves the site (YouTube included), but the login form still
+  // carries a real Origin header (with no-referrer browsers send "Origin: null").
+  r.headers.set('Referrer-Policy', 'same-origin');
   r.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
   r.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   r.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
@@ -137,9 +139,12 @@ export async function onRequest(ctx: Ctx): Promise<Response> {
       return html(loginPage(undefined, next));
     }
     if (request.method !== 'POST') return secure(new Response('Method not allowed', { status: 405 }));
-    // CSRF: the form must be posted from this origin.
+    // CSRF: the form must be posted from this site.
     const origin = request.headers.get('Origin');
-    if (origin && origin !== url.origin) return secure(new Response('Forbidden', { status: 403 }));
+    const site = request.headers.get('Sec-Fetch-Site');
+    if ((site && site !== 'same-origin' && site !== 'none') || (origin && origin !== 'null' && origin !== url.origin)) {
+      return secure(new Response('Forbidden', { status: 403 }));
+    }
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
     if (isRateLimited(ip)) return html(loginPage('Troppi tentativi. Riprova tra 15 minuti.', next), 429, { 'Retry-After': '900' });
 

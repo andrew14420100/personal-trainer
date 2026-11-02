@@ -1,0 +1,106 @@
+# Pubblicazione privata e installazione su iPhone
+
+Obiettivo: aprire un indirizzo HTTPS in Safari, autenticarti, scegliere **Aggiungi alla schermata Home** e usare FORMA LAB come un’app.
+
+> **Stato:** l’app **non è stata pubblicata**. In questo ambiente non ho un account Cloudflare né credenziali per farlo, quindi non esiste ancora un indirizzo attivo. Tutto il necessario è pronto e testato in locale nel runtime di Cloudflare (`wrangler pages dev`): segui i passi sotto.
+
+## 0. Scegli il sistema di accesso
+
+| | **Modalità B — integrata (consigliata)** | **Modalità A — Cloudflare Access** |
+|---|---|---|
+| Come accedi | Passphrase + codice a 6 cifre dall’app Password di iOS (TOTP) | Email + codice temporaneo inviato via email |
+| Costo | Gratis | Gratis fino a 50 utenti (piano Zero Trust Free) |
+| Carta di credito | Non richiesta | All’attivazione di Zero Trust Cloudflare può chiedere un metodo di pagamento anche per il piano gratuito: verificalo al momento dell’iscrizione |
+| Dove sta la protezione | `functions/_middleware.ts`, eseguito sui server Cloudflare prima di servire qualsiasi file | Davanti al sito (Cloudflare) + verifica della firma JWT nel middleware |
+
+In entrambi i casi l’app **non viene servita** se l’accesso non è configurato (il middleware risponde 503: “fail closed”). Nessun segreto è nel codice del browser.
+
+## 1. Prepara il progetto (sul tuo computer)
+
+```bash
+git clone https://github.com/andrew14420100/personal-trainer.git
+```
+
+```bash
+cd personal-trainer && npm ci
+```
+
+```bash
+npm test && npm run build
+```
+
+## 2. Crea il progetto su Cloudflare Pages (gratuito)
+
+1. Crea un account su <https://dash.cloudflare.com/sign-up> (piano Free).
+2. Accedi da terminale:
+
+```bash
+npx wrangler login
+```
+
+```bash
+npx wrangler pages project create forma-lab --production-branch main
+```
+
+Cloudflare assegna un indirizzo del tipo `https://<nome-progetto>.pages.dev`; se `forma-lab` è già preso, il nome effettivo sarà diverso. **Usa quello che stampa Wrangler.**
+
+## 3. Configura l’accesso — Modalità B (passphrase + TOTP)
+
+Genera i segreti (sul tuo computer, non condividerli):
+
+```bash
+npm run totp:new
+```
+
+Inseriscili come **segreti** del progetto (per Production e, se usi le anteprime, anche Preview):
+
+```bash
+npx wrangler pages secret put AUTH_MODE --project-name forma-lab
+```
+
+(valore `totp`), poi allo stesso modo `AUTH_PASSWORD`, `AUTH_TOTP_SECRET`, `AUTH_SESSION_SECRET` e, facoltativa, `AUTH_SESSION_DAYS` (1–90, predefinito 30). In alternativa: dashboard → Workers & Pages → forma-lab → Settings → Variables and Secrets.
+
+Sull’iPhone aggiungi il codice di verifica: **Impostazioni → Password → (+) nuovo elemento** per il dominio `.pages.dev` del progetto → **Imposta codice di verifica → Inserisci chiave di configurazione** → incolla `AUTH_TOTP_SECRET`. Salva anche la passphrase nello stesso elemento: Safari proporrà passphrase e codice in automatico.
+
+## 3-bis. Configura l’accesso — Modalità A (Cloudflare Access)
+
+1. Dashboard → **Zero Trust** → scegli il piano Free.
+2. Access → Applications → **Add an application → Self-hosted**. Dominio: quello `.pages.dev` del progetto, e aggiungi anche `*.<nome-progetto>.pages.dev` per proteggere le anteprime.
+3. Policy: **Allow**, Include → **Emails** → la tua email. Metodo di login: **One-time PIN**.
+4. Copia l’**Application Audience (AUD) Tag** e il **team domain** (`<team>.cloudflareaccess.com`).
+5. Segreti del progetto Pages: `AUTH_MODE=access`, `AUTH_ACCESS_TEAM_DOMAIN=<team>.cloudflareaccess.com`, `AUTH_ACCESS_AUD=<tag>`.
+
+Il middleware verifica la firma RS256 del token di Access: se Access venisse rimosso per errore, l’app risponde 403 invece di aprirsi.
+
+## 4. Pubblica
+
+```bash
+npm run deploy
+```
+
+Wrangler carica `dist/` e la cartella `functions/` e stampa l’URL. In alternativa puoi collegare il repository GitHub dal dashboard (Workers & Pages → Create → Pages → Connect to Git) con: build command `npm run build`, output `dist`, variabile `NODE_VERSION=22`.
+
+## 5. Controlli prima dell’uso (privacy)
+
+Da un browser **non** autenticato (finestra privata):
+
+- [ ] `https://<progetto>.pages.dev/` reindirizza a `/__auth/login` (o alla pagina di Cloudflare Access).
+- [ ] `https://<progetto>.pages.dev/assets/` di qualsiasi file JS restituisce 401/403, non il codice.
+- [ ] Solo `manifest.webmanifest`, `/icons/*` e `robots.txt` sono pubblici (servono a iOS per l’icona; non contengono dati).
+- [ ] Gli header includono `Content-Security-Policy`, `Strict-Transport-Security`, `X-Frame-Options: DENY`.
+- [ ] Una passphrase o un codice errati vengono rifiutati; dopo 5 tentativi errati compare “Troppi tentativi”.
+
+Consigliato (gratuito): una regola di **Rate limiting** in Security → WAF sul percorso `/__auth/login`, perché il limite interno è per singola istanza.
+
+## 6. Installa su iPhone
+
+1. Apri l’URL in **Safari** e accedi.
+2. Tocca **Condividi** (quadrato con la freccia) → **Aggiungi alla schermata Home** → **Aggiungi**.
+3. Apri FORMA LAB **dall’icona**. iOS tiene separati cookie e dati dell’app installata da quelli di Safari: ti verrà chiesto di accedere una volta anche lì. Da quel momento registra gli allenamenti sempre dall’icona.
+4. Al primo avvio online l’app si salva per l’uso offline (compare “Pronta per l’uso offline”).
+
+Quando la sessione di accesso scade (30 giorni predefiniti), online ti verrà richiesto di accedere di nuovo; offline l’app continua a funzionare con i dati locali.
+
+## Aggiornamenti
+
+Pubblica di nuovo con `npm run deploy`. All’apertura successiva l’app mostra “Nuova versione disponibile → Aggiorna”. I dati locali non vengono toccati.

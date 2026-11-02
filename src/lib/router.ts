@@ -6,8 +6,8 @@ export interface Route {
   query: URLSearchParams;
 }
 
-function parse(): Route {
-  const raw = (typeof location !== 'undefined' ? location.hash : '').replace(/^#/, '') || '/';
+function parse(hash?: string): Route {
+  const raw = (hash ?? (typeof location !== 'undefined' ? location.hash : '')).replace(/^#/, '') || '/';
   const [p, q = ''] = raw.split('?');
   return { path: p.split('/').filter(Boolean).map(decodeURIComponent), query: new URLSearchParams(q) };
 }
@@ -40,12 +40,22 @@ let depth = 0;
 export function navigate(to: string, opts: { replace?: boolean } = {}) {
   if (!opts.replace) depth++;
   const hash = '#' + (to.startsWith('/') ? to : '/' + to);
-  if (opts.replace) history.replaceState(null, '', hash);
-  else history.pushState(null, '', hash);
-  currentHash = location.hash;
-  current = parse();
+  try {
+    if (opts.replace) history.replaceState(null, '', hash);
+    else history.pushState(null, '', hash);
+    currentHash = location.hash;
+    current = parse(hash);
+  } catch {
+    // Sandboxed frames (e.g. the Claude preview) may refuse history changes: route in memory.
+    if (!opts.replace) depth--;
+    current = parse(hash);
+  }
   listeners.forEach((l) => l());
-  window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  try {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  } catch {
+    window.scrollTo(0, 0);
+  }
 }
 
 /** Go back inside the app; if the page was opened directly, go to `fallback`. */

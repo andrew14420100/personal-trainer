@@ -380,9 +380,13 @@ function BackupTools() {
           <input className="input" type="password" autoComplete="new-password" placeholder="Ripeti" value={pass2} onChange={(e) => setPass2(e.target.value)} aria-label="Ripeti passphrase" />
         </div>
       )}
-      <button className="btn primary block" disabled={busy} onClick={doExport}>
-        <Download size={18} /> Esporta tutti i dati
-      </button>
+      {__PREVIEW__ ? (
+        <Notice kind="info">Nell’anteprima dentro Claude il download dei file è bloccato: l’esportazione funziona nell’app pubblicata.</Notice>
+      ) : (
+        <button className="btn primary block" disabled={busy} onClick={doExport}>
+          <Download size={18} /> Esporta tutti i dati
+        </button>
+      )}
       <p className="tiny muted">Consiglio: salva il file in iCloud Drive o su un altro dispositivo una volta a settimana. Il backup cifrato è adatto anche a cloud di terze parti.</p>
 
       <div className="divider" />
