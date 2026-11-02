@@ -7,3 +7,4 @@ dist-preview
 test-results
 tests/e2e/screens/backup.json
 tests/e2e/screens/
+*.zip
