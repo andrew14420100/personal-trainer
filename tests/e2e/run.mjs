@@ -41,7 +41,7 @@ async function layoutChecks(page, label) {
     document.querySelectorAll('body *').forEach((el) => {
       const b = el.getBoundingClientRect();
       if (!b.width || getComputedStyle(el).position === 'fixed') return;
-      if (el.closest('.chart,.sheet-bg,.hero,.vplayer,.ex-thumb,.plan-card .thumb,.anatomy,.hscroll')) return; // clipped (overflow:hidden)
+      if (el.closest('.chart,.sheet-bg,.hero,.vplayer,.ex-thumb,.plan-card .thumb,.anatomy,.hscroll,.celebrate')) return; // clipped (overflow:hidden)
       if (b.right > vw + 1 || b.left < -1) over.push(`${el.tagName.toLowerCase()}.${el.className}`.slice(0, 60));
     });
     const unnamed = [...document.querySelectorAll('button, a[href], input, select, textarea')].filter((el) => {
@@ -125,6 +125,8 @@ async function run(deviceName, label, full) {
     await seedLegacy(page);
     await page.goto(BASE + '/');
     await page.waitForSelector('.hero');
+    check(`[${label}] first-run tour shown`, await page.getByRole('dialog', { name: 'Tour iniziale' }).isVisible().catch(() => false));
+    await page.getByRole('button', { name: 'Salta' }).click({ timeout: 3000 }).catch(() => {});
     await wait(800);
     const rep = await kv(page, 'migration:4.0');
     const copy = await kv(page, 'backup:pre-4.0');
@@ -144,6 +146,7 @@ async function run(deviceName, label, full) {
     check(`[${label}] migration idempotent (copy not overwritten)`, copy2?.at === copy?.at);
   } else {
     await page.goto(BASE + '/');
+    await page.getByRole('button', { name: 'Salta' }).click({ timeout: 4000 }).catch(() => {});
   }
 
   // ── Home ──
@@ -163,7 +166,7 @@ async function run(deviceName, label, full) {
   check(`[${label}] back to this week`, (await page.locator('.wday.today').count()) === 1);
 
   // ── Plan ──
-  await page.getByRole('navigation').getByRole('button', { name: 'Allenamenti' }).click();
+  await page.getByRole('navigation').getByRole('button', { name: 'Allenati' }).click();
   check(`[${label}] plan: 4 day cards`, (await page.locator('.plan-card').count()) === 4);
   for (const n of ['Petto, schiena e braccia', 'Gambe: quadricipiti e femorali', 'Petto alto, schiena e spalle', 'Glutei e gambe']) check(`[${label}] plan: day "${n}"`, await page.getByText(n, { exact: true }).isVisible());
   if (full) await layoutChecks(page, `${label} plan`);
@@ -245,7 +248,7 @@ async function run(deviceName, label, full) {
   check(`[${label}] home: today completed`, (await page.locator('.wday.today.done').count()) === 1);
 
   // ── Calendar ──
-  await page.getByRole('navigation').getByRole('button', { name: 'Calendario' }).click();
+  await page.goto(BASE + '/#/calendario');
   check(`[${label}] calendar: week view`, (await page.locator('.week .wday').count()) === 7);
   await page.getByRole('tab', { name: 'Mese' }).click();
   const m0 = await page.getByRole('button', { name: 'Torna al mese corrente' }).innerText();
@@ -291,9 +294,11 @@ async function run(deviceName, label, full) {
   }
 
   // ── Profile + backup ──
-  await page.getByRole('navigation').getByRole('button', { name: 'Profilo' }).click();
+  await page.goto(BASE + '/#/profilo');
   check(`[${label}] profile: logout link`, (await page.locator('a[href="/__auth/logout"]').count()) === 1);
   if (full) {
+    // the card appears after an async read of the local database
+    await page.getByText('Dati della versione precedente').waitFor({ timeout: 5000 }).catch(() => {});
     check(`[${label}] profile: pre-4.0 copy listed`, await page.getByText('Dati della versione precedente').isVisible());
     await page.getByRole('switch', { name: 'Cifra il backup' }).click();
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Esporta tutti i dati' }).click()]);
@@ -456,6 +461,284 @@ async function run(deviceName, label, full) {
     const [csv] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Esporta tutte le serie/ }).click()]);
     const text = readFileSync(await csv.path(), 'utf8');
     check(`[${label}] CSV export has set rows`, text.split('\r\n').length > 5 && text.includes('Curl con bilanciere'));
+  }
+
+  if (full) {
+    // ── 5.0: theme, navigation, home widgets, agenda, library, workout ──
+    await page.goto(BASE + '/#/');
+    await page.waitForSelector('.hero');
+    check(`[${label}] 5.0: 5-section bottom bar`, (await page.locator('.tabbar .tab').allInnerTexts()).map((t) => t.trim()).join('|') === 'Oggi|Agenda|Allenati|Progressi|Altro');
+    check(`[${label}] 5.0: primary button "Inizia oggi" or session state`, (await page.locator('.hero').innerText()).match(/Inizia oggi|Vedi riepilogo|Riprendi|Allenati comunque/) != null);
+    await page.getByRole('button', { name: /Personalizza/ }).click();
+    await page.getByRole('switch', { name: 'Mostra Consigli' }).click();
+    await page.getByRole('button', { name: 'Sposta su Peso corporeo' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fatto' }).click();
+    await wait(300);
+    const ws = await kv(page, 'settings');
+    check(`[${label}] 5.0: widget hidden and reordered (saved)`, ws.homeWidgets.find((w) => w.id === 'tips').visible === false && ws.homeWidgets.findIndex((w) => w.id === 'bodyweight') < ws.homeWidgets.findIndex((w) => w.id === 'time'));
+    // theme
+    await page.goto(BASE + '/#/altro');
+    await page.getByRole('tab', { name: 'Chiaro' }).click();
+    await wait(300);
+    check(`[${label}] 5.0: light theme applied`, (await page.evaluate(() => document.documentElement.dataset.theme)) === 'light' && (await page.evaluate(() => getComputedStyle(document.body).backgroundColor)) === 'rgb(244, 246, 250)');
+    await page.screenshot({ path: join(shots, `${label}-5-light-more.png`), fullPage: true });
+    await page.goto(BASE + '/#/');
+    await page.waitForSelector('.hero');
+    await page.screenshot({ path: join(shots, `${label}-5-light-home.png`), fullPage: true });
+    await layoutChecks(page, `${label} 5.0 home light`);
+    await page.goto(BASE + '/#/altro');
+    await page.getByRole('tab', { name: 'Scuro' }).click();
+    await page.getByRole('switch', { name: 'Modalità Palestra' }).click();
+    await wait(200);
+    check(`[${label}] 5.0: gym mode`, (await page.evaluate(() => document.documentElement.dataset.gym)) === '1');
+    await page.getByRole('switch', { name: 'Modalità Palestra' }).click();
+    // agenda: event that blocks the day + day navigation
+    await page.goto(BASE + '/#/agenda');
+    await page.getByRole('button', { name: 'Aggiungi impegno' }).click();
+    await page.getByLabel('Titolo impegno').fill('Cena di lavoro');
+    await page.getByRole('switch', { name: 'Blocca la giornata' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Salva' }).click();
+    await wait(300);
+    check(`[${label}] 5.0: personal event saved`, (await page.getByText('Cena di lavoro').count()) === 1 && (await kv(page, 'settings')).events[0].blocks === true);
+    await page.getByRole('button', { name: 'Giorno successivo' }).click();
+    check(`[${label}] 5.0: agenda day navigation`, (await page.getByText('Cena di lavoro').count()) === 0);
+    await page.getByRole('tab', { name: 'Mese' }).click();
+    check(`[${label}] 5.0: agenda month view`, (await page.locator('.month .mcell').count()) >= 28);
+    await page.getByRole('tab', { name: 'Giorno' }).click();
+    await page.screenshot({ path: join(shots, `${label}-5-agenda.png`), fullPage: true });
+    await layoutChecks(page, `${label} 5.0 agenda`);
+    // library 500+
+    await page.goto(BASE + '/#/libreria');
+    const total = Number((await page.getByText(/esercizi trovati/).innerText()).match(/\d+/)[0]);
+    check(`[${label}] 5.0: library has more than 500 exercises`, total > 500, String(total));
+    await page.getByLabel('Attrezzatura').selectOption('Manubri');
+    await page.getByLabel('Difficoltà').selectOption('principiante');
+    await page.getByRole('tab', { name: 'Bicipiti' }).click();
+    const filtered = Number((await page.getByText(/esercizi trovati/).innerText()).match(/\d+/)[0]);
+    check(`[${label}] 5.0: combined filters`, filtered > 0 && filtered < 60, String(filtered));
+    await page.locator('.ex-row').first().click();
+    await page.getByRole('button', { name: 'Aggiungi ai preferiti' }).click();
+    await wait(200);
+    check(`[${label}] 5.0: favourite saved`, (await kv(page, 'settings')).favorites.length === 1);
+    await page.goto(BASE + '/#/libreria');
+    await page.getByLabel('Mostra').selectOption('preferiti');
+    check(`[${label}] 5.0: favourites filter`, (await page.locator('.ex-row').count()) === 1);
+    await layoutChecks(page, `${label} 5.0 library`);
+    // resume prompt only for a session already open when the app is reopened
+    await page.goto(BASE + '/#/giorno/upper-a');
+    await page.getByRole('button', { name: /Inizia allenamento/ }).click();
+    await page.waitForSelector('.wk-top');
+    check(`[${label}] 5.0: no resume prompt when starting a session`, (await page.getByRole('dialog', { name: 'Allenamento in sospeso' }).count()) === 0);
+    await page.goto(BASE + '/#/');
+    await page.reload();
+    await page.getByRole('dialog', { name: 'Allenamento in sospeso' }).waitFor({ timeout: 4000 }).catch(() => {});
+    check(`[${label}] 5.0: resume prompt on reopening the app`, await page.getByRole('dialog', { name: 'Allenamento in sospeso' }).isVisible());
+    await page.getByRole('button', { name: 'Riprendi', exact: true }).click();
+    await page.waitForSelector('.wk-top');
+    await page.getByRole('button', { name: 'Chiudi allenamento' }).click();
+    await page.getByRole('button', { name: 'Elimina questa sessione' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Elimina sessione' }).click();
+    await wait(300);
+    // workout: auto-confirm, undo, quick entry
+    await page.goto(BASE + '/#/giorno/lower-b');
+    await page.getByRole('button', { name: /Inizia allenamento/ }).click();
+    await page.waitForSelector('.wk-top');
+    await page.getByRole('button', { name: 'Nascondi video' }).click().catch(() => {});
+    await page.getByLabel('Carico serie 1 in kg').fill('60');
+    await page.getByLabel('Ripetizioni serie 1').fill('10');
+    await page.getByLabel('Carico serie 2 in kg').click(); // leaving the reps field
+    await wait(400);
+    check(`[${label}] 5.0: set auto-confirmed on leaving reps`, (await page.locator('.set-r.done').count()) === 1);
+    await page.locator('.toast').getByRole('button', { name: 'Annulla' }).click();
+    await wait(400);
+    check(`[${label}] 5.0: undo last set`, (await page.locator('.set-r.done').count()) === 0);
+    await page.getByRole('button', { name: /Più 2,?5? kg|Più 2.5 kg/ }).first().click().catch(() => {});
+    await page.getByRole('button', { name: /^Conferma serie 1/ }).click();
+    await wait(400);
+    check(`[${label}] 5.0: quick entry confirms set`, (await page.locator('.set-r.done').count()) === 1);
+    await page.screenshot({ path: join(shots, `${label}-5-workout.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Salta recupero' }).click().catch(() => {});
+    await page.getByRole('button', { name: 'Chiudi allenamento' }).click();
+    await page.getByRole('button', { name: 'Elimina questa sessione' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Elimina sessione' }).click();
+    await wait(300);
+
+    // ── Importa scheda (FORMA LAB Workout Exchange v1) ──
+    const countSessions = () => page.evaluate(() => new Promise((res) => { const r = indexedDB.open('forma-lab'); r.onsuccess = () => { const g = r.result.transaction('sessions').objectStore('sessions').count(); g.onsuccess = () => res(g.result); }; }));
+    const sessionsBefore = await countSessions();
+    await page.goto(BASE + '/#/allenamenti');
+    await page.getByRole('button', { name: 'Importa scheda' }).click();
+    await page.waitForSelector('text=FORMA LAB Workout Exchange v1');
+    await page.setInputFiles('#import-program-file', join(root, 'public/formats/esempio-8-settimane.json'));
+    await page.waitForSelector('#anteprima');
+    check(`[${label}] import: preview of the 8-week program`, await page.getByLabel('Nome del programma').inputValue() === 'Ipertrofia 8 settimane – Upper/Lower');
+    check(`[${label}] import: phases shown`, (await page.getByText(/Settimane 7–7/).count()) === 1);
+    const confirmBtn = page.getByRole('button', { name: 'Conferma e importa programma' });
+    const ambiguous = page.locator('select[aria-label^="Scegli l’esercizio per"]');
+    check(`[${label}] import: ambiguous names need a choice (button disabled)`, (await ambiguous.count()) >= 1 && (await confirmBtn.isDisabled()));
+    while (await ambiguous.count()) await ambiguous.first().selectOption({ index: 1 });
+    await page.screenshot({ path: join(shots, `${label}-import-preview.png`), fullPage: true });
+    await layoutChecks(page, `${label} import preview`);
+    await confirmBtn.click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    await page.getByRole('button', { name: 'Esporta scheda per ChatGPT' }).waitFor();
+    const startBtns = await page.getByRole('button', { name: /^Inizia / }).allInnerTexts();
+    check(`[${label}] import: program saved with 4 days`, startBtns.length === 4, JSON.stringify(startBtns));
+    const st1 = await kv(page, 'settings');
+    check(`[${label}] import: saved in the ChatGPT folder`, st1.programs.length === 1 && st1.routines.filter((r) => r.folder === 'Schede create con ChatGPT').length === 4);
+    check(`[${label}] import: history untouched`, (await countSessions()) === sessionsBefore);
+    await page.getByRole('button', { name: 'Rendi predefinito' }).click();
+    check(`[${label}] default: week preview before confirming`, (await page.getByRole('dialog').getByText('Riposo').count()) >= 1);
+    await page.getByRole('dialog').getByRole('button', { name: 'Conferma' }).click();
+    await page.waitForSelector('text=Settimana 1 di 8');
+    check(`[${label}] import: program activated (week 1, phase)`, (await page.getByText(/Settimana 1 di 8 · Accumulo/).count()) === 1);
+    await layoutChecks(page, `${label} program view`);
+    await page.screenshot({ path: join(shots, `${label}-program.png`), fullPage: true });
+    // export → reimport → duplicate detected
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Esporta scheda per ChatGPT' }).click()]);
+    const exported = JSON.parse(readFileSync(await dl.path(), 'utf8'));
+    check(`[${label}] export: official format without personal data`, exported.format === 'forma-lab-workout-exchange' && exported.program.days.length === 4 && !JSON.stringify(exported).match(/sessions|bodyWeight|photo|weight"/));
+    await page.goto(BASE + '/#/importa');
+    await page.setInputFiles('#import-program-file', await dl.path());
+    await page.waitForSelector('#anteprima');
+    check(`[${label}] reimport: duplicate detected with update/duplicate choice`, (await page.getByText(/Programma già presente/).count()) === 1 && (await page.getByRole('tab', { name: 'Aggiorna' }).getAttribute('aria-selected')) === 'true');
+    check(`[${label}] reimport: no differences after export`, (await page.getByText(/Nessuna differenza negli esercizi/).count()) === 1);
+    await page.getByRole('button', { name: 'Conferma e importa programma' }).click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    await page.getByRole('button', { name: 'Esporta scheda per ChatGPT' }).waitFor();
+    check(`[${label}] reimport: updated, not duplicated`, (await kv(page, 'settings')).programs.length === 1);
+    // unsafe / invalid pasted text
+    await page.goto(BASE + '/#/importa');
+    const bad = JSON.parse(readFileSync(join(root, 'public/formats/esempio-8-settimane.json'), 'utf8'));
+    bad.program.days[0].notes = '<script>alert(1)</script>';
+    await page.getByLabel('Testo della scheda da importare').fill(JSON.stringify(bad));
+    await page.getByRole('button', { name: 'Analizza' }).click();
+    check(`[${label}] import: unsafe content rejected`, (await page.getByText(/Contenuto non sicuro/).count()) >= 1 && (await page.locator('#anteprima').count()) === 0);
+    await page.getByLabel('Testo della scheda da importare').fill('{ "format": "forma-lab-workout-exchange", ');
+    await page.getByRole('button', { name: 'Analizza' }).click();
+    check(`[${label}] import: malformed JSON rejected`, (await page.getByText(/JSON non valido/).count()) === 1);
+    // unknown exercise pasted inside a ChatGPT answer (```json fence) → create as my exercise
+    const unk = JSON.parse(readFileSync(join(root, 'public/formats/esempio-8-settimane.json'), 'utf8'));
+    unk.program.name = 'Programma con esercizio nuovo';
+    unk.program.days = [unk.program.days[1]];
+    unk.program.daysPerWeek = 1;
+    unk.program.phases = [];
+    unk.program.days[0].exercises[0] = { name: 'Belt squat alla macchina XZ', sets: 3, reps: { min: 8, max: 12 }, restSec: 120 };
+    await page.getByLabel('Testo della scheda da importare').fill('Ecco la tua scheda:\n```json\n' + JSON.stringify(unk) + '\n```');
+    await page.getByRole('button', { name: 'Analizza' }).click();
+    await page.waitForSelector('#anteprima');
+    check(`[${label}] import: unknown exercise blocks until resolved`, (await page.getByText(/non è nella libreria/).count()) >= 1 && (await page.getByRole('button', { name: 'Conferma e importa programma' }).isDisabled()));
+    await page.getByRole('button', { name: 'Crea come esercizio mio' }).click();
+    await page.getByRole('button', { name: 'Conferma e importa programma' }).click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    await page.waitForSelector('text=Belt squat alla macchina XZ');
+    const st2 = await kv(page, 'settings');
+    check(`[${label}] import: unknown exercise created as custom`, st2.programs.length === 2 && st2.customExercises.some((c) => c.name === 'Belt squat alla macchina XZ'));
+    await page.locator('.toast').getByRole('button', { name: 'Annulla' }).click().catch(() => {});
+    await wait(500);
+    check(`[${label}] import: undo removes the last import`, (await kv(page, 'settings')).programs.length === 1);
+    check(`[${label}] import: history still untouched`, (await countSessions()) === sessionsBefore);
+    // ── Default program management (PR #5): the user's 8-week Upper/Lower plan ──
+    const planIds = (sel) => page.locator(sel).evaluateAll((els) => els.map((e) => e.getAttribute('data-plan')).filter(Boolean));
+    await page.goto(BASE + '/#/importa');
+    await page.setInputFiles('#import-program-file', join(root, 'public/formats/chatgpt-ripartenza-8-settimane.json'));
+    await page.waitForSelector('#anteprima');
+    check(`[${label}] PR5: user file previewed`, (await page.getByLabel('Nome del programma').inputValue()).startsWith('Ripartenza intelligente'));
+    check(`[${label}] PR5: every exercise recognized`, (await page.getByText(/16\/16 esercizi riconosciuti|(\d+)\/\1 esercizi riconosciuti/).count()) === 1, await page.locator('#anteprima .section-head').innerText());
+    const amb2 = page.locator('select[aria-label^="Scegli l’esercizio per"]');
+    while (await amb2.count()) await amb2.first().selectOption({ index: 1 });
+    for (const o of ['Aggiungi', 'Aggiungi e rendi predefinita', 'Sostituisci predefinita', 'Sostituisci tutte le schede']) check(`[${label}] PR5: import option "${o}"`, (await page.getByRole('radio', { name: new RegExp('^' + o + '(?! e rendi)') }).count()) === 1);
+    await page.getByRole('radio', { name: /^Sostituisci tutte le schede/ }).click();
+    check(`[${label}] PR5: replacing everything needs explicit confirmation`, await page.getByRole('button', { name: 'Importa e sostituisci' }).isDisabled());
+    await page.getByRole('radio', { name: /^Aggiungi e rendi predefinita/ }).click();
+    await page.screenshot({ path: join(shots, `${label}-pr5-import.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Importa e rendi predefinito' }).click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    const st5 = await kv(page, 'settings');
+    const ripId = st5.programs.find((x) => x.name.startsWith('Ripartenza'))?.id;
+    check(`[${label}] PR5: imported program is the default`, !!ripId && st5.activeProgramId === ripId);
+    await page.reload();
+    await page.goto(BASE + '/#/');
+    await page.waitForSelector('.hero');
+    const ripRoutines = (await kv(page, 'settings')).programs.find((x) => x.id === ripId).days.map((d) => `r:${d.routineId}`);
+    check(`[${label}] PR5: Home uses only the default program (after restart)`, ripRoutines.includes(await page.locator('.hero').getAttribute('data-plan')));
+    await page.goto(BASE + '/#/calendario');
+    await page.getByRole('tab', { name: 'Mese' }).click();
+    let cal = await planIds('.mcell[data-plan]');
+    if (!cal.length) { await page.getByRole('button', { name: 'Mese successivo' }).click(); cal = await planIds('.mcell[data-plan]'); }
+    check(`[${label}] PR5: Calendar uses only the default program`, cal.length > 0 && cal.every((x) => ripRoutines.includes(x)), JSON.stringify(cal.slice(0, 4)));
+    await page.goto(BASE + '/#/agenda');
+    let ag = [];
+    for (let i = 0; i < 7 && !ag.length; i++) { ag = await planIds('[data-plan]'); if (!ag.length) await page.getByRole('button', { name: 'Giorno successivo' }).click(); }
+    check(`[${label}] PR5: Agenda uses only the default program`, ag.length > 0 && ag.every((x) => ripRoutines.includes(x)), JSON.stringify(ag));
+    // manage page: delete the original → never comes back
+    await page.goto(BASE + '/#/allenamenti');
+    await page.getByRole('button', { name: 'Gestisci schede' }).click();
+    await page.waitForSelector('text=Predefinito:');
+    await layoutChecks(page, `${label} manage`);
+    await wait(700);
+    await page.screenshot({ path: join(shots, `${label}-pr5-manage.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Elimina Scheda FORMA LAB (4 giorni)' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Elimina', exact: true }).click();
+    await wait(400);
+    await page.reload();
+    await page.goto(BASE + '/#/allenamenti');
+    await page.waitForSelector('text=Programma predefinito');
+    check(`[${label}] PR5: original deleted and not back after restart`, (await page.locator('.plan-card').count()) === 0 && (await page.getByText('Ripristina modello originale').count()) === 1 && (await kv(page, 'settings')).originalHidden === true);
+    // archive + restore with multi-select
+    await page.goto(BASE + '/#/schede');
+    await page.getByRole('button', { name: 'Seleziona tutte' }).click();
+    await page.getByRole('button', { name: 'Archivia' }).click();
+    await wait(400);
+    const arch = await kv(page, 'settings');
+    check(`[${label}] PR5: bulk archive (default becomes none)`, arch.programs.every((x) => x.archived) && arch.activeProgramId === 'none');
+    await page.getByRole('tab', { name: 'Archiviate' }).click();
+    await page.getByRole('button', { name: 'Seleziona tutte' }).click();
+    await page.getByRole('button', { name: 'Ripristina', exact: true }).click();
+    await wait(400);
+    check(`[${label}] PR5: bulk restore`, (await kv(page, 'settings')).programs.every((x) => !x.archived));
+    await page.getByRole('tab', { name: 'Tutte' }).click();
+    // Elimina tutte with double confirmation
+    const sessBeforeWipe = await countSessions();
+    await page.getByRole('button', { name: 'Elimina tutte le schede' }).click();
+    check(`[${label}] PR5: mass delete shows counts`, (await page.getByRole('dialog').getByText(/programmi, \d+ schede personali/).count()) === 1);
+    await page.getByRole('dialog').getByRole('button', { name: 'Continua' }).click();
+    const finalDel = page.getByRole('dialog').getByRole('button', { name: 'Elimina definitivamente' });
+    check(`[${label}] PR5: second confirmation required (ELIMINA)`, await finalDel.isDisabled());
+    await page.getByLabel('Scrivi ELIMINA per confermare').fill('ELIMINA');
+    await finalDel.click();
+    await wait(500);
+    const empty = await kv(page, 'settings');
+    check(`[${label}] PR5: all schede deleted`, empty.programs.length === 0 && empty.routines.length === 0 && empty.activeProgramId === 'none' && empty.originalHidden === true);
+    check(`[${label}] PR5: history not deleted`, (await countSessions()) === sessBeforeWipe);
+    await page.reload();
+    await page.goto(BASE + '/#/');
+    await page.getByText('Nessuna scheda attiva').waitFor({ timeout: 4000 }).catch(() => {});
+    check(`[${label}] PR5: empty Home "Nessuna scheda attiva" after restart`, await page.getByText('Nessuna scheda attiva').isVisible());
+    await page.screenshot({ path: join(shots, `${label}-pr5-empty.png`), fullPage: true });
+    await layoutChecks(page, `${label} empty home`);
+    // import after "Elimina tutte"
+    await page.getByRole('button', { name: 'Importa scheda' }).first().click();
+    await page.getByRole('button', { name: /Programma pronto: Ripartenza intelligente/ }).click();
+    await page.waitForSelector('#anteprima');
+    while (await amb2.count()) await amb2.first().selectOption({ index: 1 });
+    await page.getByRole('radio', { name: /^Aggiungi e rendi predefinita/ }).click();
+    await page.getByRole('button', { name: 'Importa e rendi predefinito' }).click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    await page.goto(BASE + '/#/');
+    await page.waitForSelector('.hero');
+    check(`[${label}] PR5: import after "Elimina tutte" restores a working Home`, (await page.locator('.hero').getAttribute('data-plan'))?.startsWith('r:'));
+    // deletion needs two confirmations (last step of this device run)
+    await page.goto(BASE + '/#/profilo');
+    await page.getByRole('button', { name: /Cancella tutti i dati/ }).first().click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Continua' }).click();
+    const finalBtn = page.getByRole('dialog').getByRole('button', { name: 'Cancella tutti i dati' });
+    check(`[${label}] 5.0: deletion blocked until CANCELLA is typed`, await finalBtn.isDisabled());
+    await page.getByLabel('Scrivi CANCELLA per confermare').fill('CANCELLA');
+    await finalBtn.click();
+    await wait(500);
+    const left = await page.evaluate(() => new Promise((res) => { const r = indexedDB.open('forma-lab'); r.onsuccess = () => { const g = r.result.transaction('sessions').objectStore('sessions').count(); g.onsuccess = () => res(g.result); }; }));
+    check(`[${label}] 5.0: data deleted after double confirmation`, left === 0, String(left));
   }
   await ctx.close();
 }

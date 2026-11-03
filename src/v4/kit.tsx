@@ -1,7 +1,7 @@
 // FORMA LAB 4.0 UI kit.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronLeft, Info } from 'lucide-react';
+import { ChevronDown, ChevronLeft, GripVertical, Info } from 'lucide-react';
 import { back } from '../lib/router';
 
 export function NavBar({ title, right, fallback = '/' }: { title?: ReactNode; right?: ReactNode; fallback?: string }) {
@@ -131,23 +131,127 @@ export function Confirm({ open, title, body, confirmLabel, danger, onConfirm, on
   );
 }
 
-type ToastFn = (m: string) => void;
+type ToastAction = { label: string; run: () => void };
+type ToastFn = (m: string, action?: ToastAction, ms?: number) => void;
 let toastImpl: ToastFn = () => {};
-export const toast: ToastFn = (m) => toastImpl(m);
+export const toast: ToastFn = (m, action, ms) => toastImpl(m, action, ms);
 export function ToastHost() {
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ m: string; action?: ToastAction } | null>(null);
   useEffect(() => {
     let t: number | undefined;
-    toastImpl = (m) => {
-      setMsg(m);
+    toastImpl = (m, action, ms) => {
+      setMsg({ m, action });
       clearTimeout(t);
-      t = window.setTimeout(() => setMsg(null), 2400);
+      t = window.setTimeout(() => setMsg(null), ms ?? (action ? 4500 : 2400));
     };
     return () => clearTimeout(t);
   }, []);
   return msg ? (
-    <div className="toast" role="status" aria-live="polite">
-      {msg}
+    <div className="toast row" role="status" aria-live="polite" style={{ gap: 12 }}>
+      <span className="grow">{msg.m}</span>
+      {msg.action && (
+        <button
+          className="btn sm"
+          onClick={() => {
+            msg.action!.run();
+            setMsg(null);
+          }}
+        >
+          {msg.action.label}
+        </button>
+      )}
     </div>
   ) : null;
+}
+
+/** Short celebration overlay (record). Respects reduced motion via CSS. */
+let celebrateImpl: (text: string) => void = () => {};
+export const celebrate = (text: string) => celebrateImpl(text);
+export function CelebrationHost() {
+  const [text, setText] = useState<string | null>(null);
+  useEffect(() => {
+    let t: number | undefined;
+    celebrateImpl = (x) => {
+      setText(x);
+      clearTimeout(t);
+      t = window.setTimeout(() => setText(null), 2000);
+      if ('vibrate' in navigator) navigator.vibrate?.([30, 40, 60]);
+    };
+    return () => clearTimeout(t);
+  }, []);
+  if (!text) return null;
+  const colors = ['#2f6bff', '#00b8ff', '#22c55e', '#f59e0b', '#ffffff'];
+  return (
+    <div className="celebrate" role="status" aria-live="assertive">
+      {Array.from({ length: 22 }, (_, i) => {
+        const a = (i / 22) * Math.PI * 2;
+        const r = 120 + (i % 4) * 30;
+        return <i key={i} style={{ background: colors[i % colors.length], ['--dx' as string]: `${Math.cos(a) * r}px`, ['--dy' as string]: `${Math.sin(a) * r}px` }} />;
+      })}
+      <div className="medal">🏅 Nuovo record!<div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>{text}</div></div>
+    </div>
+  );
+}
+
+/** Reorderable list: drag the handle (touch or mouse) or use the arrow buttons (keyboard/VoiceOver). */
+export function SortableList<T extends { id: string }>({ items, onChange, render, label }: { items: T[]; onChange: (items: T[]) => void; render: (item: T, handle: ReactNode, move: (d: number) => void) => ReactNode; label: string }) {
+  const [drag, setDrag] = useState<{ id: string; y0: number; dy: number } | null>(null);
+  const refs = useRef(new Map<string, HTMLDivElement>());
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= items.length) return;
+    const n = [...items];
+    const [x] = n.splice(i, 1);
+    n.splice(j, 0, x);
+    onChange(n);
+  };
+  const end = () => {
+    if (!drag) return;
+    const i = items.findIndex((x) => x.id === drag.id);
+    const el = refs.current.get(drag.id);
+    if (el) {
+      const mid = el.getBoundingClientRect().top + el.offsetHeight / 2;
+      let target = i;
+      items.forEach((it, k) => {
+        const r = refs.current.get(it.id)?.getBoundingClientRect();
+        if (!r || it.id === drag.id) return;
+        const c = r.top + r.height / 2;
+        if (k > i && mid > c) target = k;
+        if (k < i && mid < c && target === i) target = k;
+      });
+      if (target !== i) move(i, target - i);
+    }
+    setDrag(null);
+  };
+  return (
+    <div role="list" aria-label={label} onPointerMove={(e) => drag && setDrag({ ...drag, dy: e.clientY - drag.y0 })} onPointerUp={end} onPointerCancel={() => setDrag(null)}>
+      {items.map((it, i) => {
+        const handle = (
+          <span
+            className="drag-handle icon-btn clear"
+            role="img"
+            aria-label="Trascina per riordinare"
+            onPointerDown={(e) => {
+              (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+              setDrag({ id: it.id, y0: e.clientY, dy: 0 });
+            }}
+          >
+            <GripVertical size={18} />
+          </span>
+        );
+        const dragging = drag?.id === it.id;
+        return (
+          <div
+            key={it.id}
+            role="listitem"
+            ref={(el) => (el ? refs.current.set(it.id, el) : refs.current.delete(it.id))}
+            className={dragging ? 'dragging' : undefined}
+            style={dragging ? { transform: `translateY(${drag!.dy}px)` } : undefined}
+          >
+            {render(it, handle, (d) => move(i, d))}
+          </div>
+        );
+      })}
+    </div>
+  );
 }

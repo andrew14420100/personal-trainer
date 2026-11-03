@@ -1,6 +1,6 @@
 // 4.1: exercise picker, routine editor (custom routines and edited plan days), library, routine view.
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, Copy, ChevronRight, Dumbbell, Link2, Play, PlayCircle, Plus, Search, Trash2, Unlink, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Copy, Download, ChevronRight, Dumbbell, Link2, Play, PlayCircle, Plus, Search, Trash2, Unlink, Zap } from 'lucide-react';
 import { useData, useSettingsUpdater } from '../app/store';
 import { EXERCISE_BY_ID } from '../data/exercises';
 import { EXERCISE_MUSCLES, MUSCLE_LABEL, MUSCLE_REGION, aggregate, type MuscleId } from '../data/muscles';
@@ -16,6 +16,8 @@ import type { DayId } from '../data/types';
 import { Anatomy } from '../components/Anatomy';
 import { Confirm, Empty, NavBar, Section, Sheet, toast } from './kit';
 import { ExerciseThumb } from './Plan';
+import { downloadExchange } from './Programs';
+import { exportRoutine } from '../lib/exchange';
 
 const GROUPS = ['Tutti', 'Cardio', 'Petto', 'Schiena', 'Spalle', 'Bicipiti', 'Tricipiti', 'Gambe', 'Glutei', 'Femorali', 'Polpacci', 'Addome'];
 const matchGroup = (id: string, g: string) => {
@@ -29,42 +31,108 @@ const matchGroup = (id: string, g: string) => {
   return regions.includes(g);
 };
 
-function useFiltered(q: string, g: string) {
+export interface LibFilter {
+  q: string;
+  g: string;
+  eq: string;
+  lv: string;
+  only: '' | 'preferiti' | 'recenti' | 'archiviati';
+}
+export const EMPTY_FILTER: LibFilter = { q: '', g: 'Tutti', eq: '', lv: '', only: '' };
+const EQUIPMENTS = ['Bilanciere', 'Manubri', 'Macchina', 'Cavi', 'Corpo libero', 'Kettlebell', 'Elastici', 'Bilanciere EZ', 'Palla medica', 'Fitball', 'Foam roller', 'Altro'];
+export const eqOf = (equipment: string) => {
+  const e = equipment.toLowerCase();
+  if (/bilanciere ez/.test(e)) return 'Bilanciere EZ';
+  if (/multipower|smith|macchin|leg press|hack|pec|chest press|leg curl|leg extension|abductor|adductor|calf|t-bar|pressa/.test(e)) return 'Macchina';
+  if (/cav|pulley|lat machine|corda/.test(e)) return 'Cavi';
+  if (/manubri/.test(e)) return 'Manubri';
+  if (/bilanciere/.test(e)) return 'Bilanciere';
+  if (/corpo libero|sbarra|parallele|nessuno|tapis|cyclette|ellittica|vogatore|stepper/.test(e)) return 'Corpo libero';
+  return EQUIPMENTS.find((x) => e.includes(x.toLowerCase())) ?? 'Altro';
+};
+export const levelOf = (id: string) => EXERCISE_BY_ID[id]?.level ?? (sourceOf(id) === 'scheda' ? 'principiante' : 'intermedio');
+
+function useFiltered(f: LibFilter) {
   const { settings } = useData();
   return useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return allExercises().filter((e) => matchGroup(e.id, g) && (!t || `${e.name} ${e.nameEn} ${EXERCISE_MUSCLES[e.id]?.group ?? ''}`.toLowerCase().includes(t)));
+    const t = f.q.trim().toLowerCase();
+    const fav = new Set(settings.favorites);
+    const arch = new Set(settings.archivedExercises);
+    let list = allExercises();
+    if (f.only === 'recenti') list = settings.recentExercises.map((id) => EXERCISE_BY_ID[id]).filter(Boolean);
+    return list.filter(
+      (e) =>
+        (f.only === 'archiviati' ? arch.has(e.id) : !arch.has(e.id)) &&
+        (f.only !== 'preferiti' || fav.has(e.id)) &&
+        matchGroup(e.id, f.g) &&
+        (!f.eq || eqOf(e.equipment) === f.eq) &&
+        (!f.lv || levelOf(e.id) === f.lv) &&
+        (!t || `${e.name} ${e.nameEn} ${EXERCISE_MUSCLES[e.id]?.group ?? ''} ${e.equipment}`.toLowerCase().includes(t)),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, g, settings.customExercises]);
+  }, [f, settings.customExercises, settings.favorites, settings.archivedExercises, settings.recentExercises]);
 }
 
-function Filters({ q, setQ, g, setG }: { q: string; setQ: (v: string) => void; g: string; setG: (v: string) => void }) {
+function Filters({ f, set }: { f: LibFilter; set: (f: LibFilter) => void }) {
   return (
     <>
       <div className="search">
         <Search size={17} className="c3" />
-        <input className="input" type="search" placeholder="Cerca esercizio" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cerca esercizio" />
+        <input className="input" type="search" placeholder="Cerca esercizio" value={f.q} onChange={(e) => set({ ...f, q: e.target.value })} aria-label="Cerca esercizio" />
       </div>
       <div className="hscroll mt8" role="tablist" aria-label="Gruppo muscolare">
         {GROUPS.map((x) => (
-          <button key={x} role="tab" aria-selected={g === x} className={`chip${g === x ? ' accent' : ''}`} onClick={() => setG(x)}>
+          <button key={x} role="tab" aria-selected={f.g === x} className={`chip${f.g === x ? ' accent' : ''}`} onClick={() => set({ ...f, g: x })}>
             {x}
           </button>
         ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginTop: 8 }}>
+        <select className="input" aria-label="Attrezzatura" value={f.eq} onChange={(e) => set({ ...f, eq: e.target.value })}>
+          <option value="">Attrezzatura</option>
+          {EQUIPMENTS.map((x) => (
+            <option key={x}>{x}</option>
+          ))}
+        </select>
+        <select className="input" aria-label="Difficoltà" value={f.lv} onChange={(e) => set({ ...f, lv: e.target.value })}>
+          <option value="">Difficoltà</option>
+          <option value="principiante">Principiante</option>
+          <option value="intermedio">Intermedio</option>
+          <option value="avanzato">Avanzato</option>
+        </select>
+        <select className="input" aria-label="Mostra" value={f.only} onChange={(e) => set({ ...f, only: e.target.value as LibFilter['only'] })}>
+          <option value="">Tutti</option>
+          <option value="preferiti">Preferiti</option>
+          <option value="recenti">Recenti</option>
+          <option value="archiviati">Archiviati</option>
+        </select>
       </div>
     </>
   );
 }
 
-const SRC_LABEL = { scheda: 'Scheda', libreria: 'Libreria', tuo: 'Tuo' } as const;
+/** Long lists render 60 rows at a time (fast on iPhone). */
+function useWindow(n: number, deps: unknown) {
+  const [count, setCount] = useState(60);
+  const key = JSON.stringify(deps);
+  const [prev, setPrev] = useState(key);
+  if (prev !== key) {
+    setPrev(key);
+    setCount(60);
+  }
+  return [Math.min(n, count), () => setCount((c) => c + 60)] as const;
+}
+
+const SRC_LABEL = { scheda: 'Scheda · video', libreria: 'Libreria', catalogo: 'Catalogo', tuo: 'Tuo' } as const;
 
 /** Bottom sheet to pick one or more exercises. */
 export function ExercisePicker({ open, onClose, onPick, multi = true, title = 'Aggiungi esercizi' }: { open: boolean; onClose: () => void; onPick: (ids: string[]) => void; multi?: boolean; title?: string }) {
-  const [q, setQ] = useState('');
-  const [g, setG] = useState('Tutti');
+  const [f, setF] = useState<LibFilter>(EMPTY_FILTER);
   const [sel, setSel] = useState<string[]>([]);
   const [create, setCreate] = useState(false);
-  const list = useFiltered(q, g);
+  const list = useFiltered(f);
+  const [shown, more] = useWindow(list.length, f);
+  const q = f.q;
   const done = (ids: string[]) => {
     onPick(ids);
     setSel([]);
@@ -80,9 +148,10 @@ export function ExercisePicker({ open, onClose, onPick, multi = true, title = 'A
           </button>
         )}
       </div>
-      <Filters q={q} setQ={setQ} g={g} setG={setG} />
-      <div className="list mt12">
-        {list.map((e) => {
+      <Filters f={f} set={setF} />
+      <div className="t-xs c3 mt8">{list.length} esercizi</div>
+      <div className="list mt8">
+        {list.slice(0, shown).map((e) => {
           const on = sel.includes(e.id);
           return (
             <button key={e.id} className="ex-row" aria-pressed={multi ? on : undefined} onClick={() => (multi ? setSel((s) => (on ? s.filter((x) => x !== e.id) : [...s, e.id])) : done([e.id]))}>
@@ -102,6 +171,11 @@ export function ExercisePicker({ open, onClose, onPick, multi = true, title = 'A
         })}
         {!list.length && <div className="list-row t-sm c3">Nessun esercizio trovato.</div>}
       </div>
+      {shown < list.length && (
+        <button className="btn block mt8" onClick={more}>
+          Mostra altri ({list.length - shown})
+        </button>
+      )}
       <button className="btn block ghost mt12" onClick={() => setCreate(true)}>
         <Plus size={16} /> Crea un esercizio tuo
       </button>
@@ -455,6 +529,9 @@ export function RoutineView({ id }: { id: string }) {
       >
         <Copy size={16} /> Duplica
       </button>
+      <button className="btn block mt8" onClick={() => downloadExchange(exportRoutine(r))}>
+        <Download size={16} /> Esporta scheda per ChatGPT
+      </button>
       <Section title="Muscoli">
         <div className="card">
           <Anatomy primary={m.primary} secondary={m.secondary} />
@@ -488,10 +565,10 @@ export function RoutineView({ id }: { id: string }) {
 
 /** Library of every exercise. */
 export function Library() {
-  const [q, setQ] = useState('');
-  const [g, setG] = useState('Tutti');
+  const [f, setF] = useState<LibFilter>(EMPTY_FILTER);
   const [create, setCreate] = useState(false);
-  const list = useFiltered(q, g);
+  const list = useFiltered(f);
+  const [shown, more] = useWindow(list.length, f);
   return (
     <main className="page">
       <NavBar title="Libreria esercizi" fallback="/allenamenti" right={<button className="icon-btn clear" aria-label="Crea esercizio" onClick={() => setCreate(true)}><Plus size={20} /></button>} />
@@ -499,9 +576,12 @@ export function Library() {
       <p className="t-sm c2" style={{ marginTop: 4, marginBottom: 12 }}>
         {allExercises().length} esercizi: quelli della tua scheda (con video reali), quelli della libreria (pagina tecnica, senza video: puoi aggiungere il tuo) e quelli creati da te.
       </p>
-      <Filters q={q} setQ={setQ} g={g} setG={setG} />
-      <div className="list mt12">
-        {list.map((e) => (
+      <Filters f={f} set={setF} />
+      <div className="t-xs c3 mt8" aria-live="polite">
+        {list.length} esercizi trovati
+      </div>
+      <div className="list mt8">
+        {list.slice(0, shown).map((e) => (
           <button key={e.id} className="ex-row" onClick={() => navigate(`/esercizio/${e.id}`)}>
             <ExerciseThumb exerciseId={e.id} />
             <span style={{ minWidth: 0 }}>
@@ -517,6 +597,11 @@ export function Library() {
           </button>
         ))}
       </div>
+      {shown < list.length && (
+        <button className="btn block mt8" onClick={more}>
+          Mostra altri ({list.length - shown})
+        </button>
+      )}
       <CustomExerciseSheet open={create} onClose={() => setCreate(false)} onCreated={(id) => navigate(`/esercizio/${id}`)} />
     </main>
   );

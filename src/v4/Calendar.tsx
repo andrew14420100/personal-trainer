@@ -1,22 +1,22 @@
 import { useMemo, useState } from 'react';
 import { ArrowRightLeft, CalendarX2, CheckCircle2, ChevronLeft, ChevronRight, Play, RotateCcw } from 'lucide-react';
 import { sessionMeta } from '../lib/meta';
+import { dayLink, slotsForPlanDay, startPlanDay } from '../lib/library';
 import { useData, useSettingsUpdater } from '../app/store';
-import { effectiveDay, estimateMinutes } from '../lib/plan';
+import { estimateMinutes } from '../lib/plan';
 import { sessionDurationMin, sessionSets, sessionVolume } from '../lib/stats';
 import { dateInfo, iso, mondayOf, monthGrid, parseIso, weekDates, addDays, type DateInfo } from '../lib/schedule';
 import { fullDate, monthName, volume } from '../lib/format';
 import { navigate } from '../lib/router';
-import { startSession } from '../lib/workout';
 import { AppBar, Notice, Seg, Sheet, toast } from './kit';
 import { Legend, StateDots, WeekStrip, stateLabel, weekLabel } from './Week';
 
 const WD = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
 
-export function Calendar() {
+export function Calendar({ embedded = false, initialView = 'settimana' }: { embedded?: boolean; initialView?: 'settimana' | 'mese' } = {}) {
   const { sessions, settings } = useData();
   const today = iso(new Date());
-  const [view, setView] = useState<'settimana' | 'mese'>('settimana');
+  const [view, setView] = useState<'settimana' | 'mese'>(initialView);
   const [sel, setSel] = useState(today);
   const [ym, setYm] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
   const cells = useMemo(() => monthGrid(ym.y, ym.m), [ym]);
@@ -33,10 +33,11 @@ export function Calendar() {
   }, [infos, today]);
   const shiftMonth = (n: number) => setYm(({ y, m }) => ({ y: m + n < 0 ? y - 1 : m + n > 11 ? y + 1 : y, m: (m + n + 12) % 12 }));
 
+  const Wrap = embedded ? 'div' : 'main';
   return (
-    <main className="page">
-      <AppBar title="Calendario" />
-      <Seg label="Vista" value={view} onChange={setView} options={[{ value: 'settimana', label: 'Settimana' }, { value: 'mese', label: 'Mese' }]} />
+    <Wrap className={embedded ? undefined : 'page'}>
+      {!embedded && <AppBar title="Calendario" />}
+      {!embedded && <Seg label="Vista" value={view} onChange={setView} options={[{ value: 'settimana', label: 'Settimana' }, { value: 'mese', label: 'Mese' }]} />}
 
       {view === 'settimana' ? (
         <div className="card mt12">
@@ -78,6 +79,7 @@ export function Calendar() {
                   className={`mcell${info.date === today ? ' today' : ''}${info.date === sel ? ' sel' : ''}${info.state === 'done' ? ' done' : ''}`}
                   aria-label={`${d.getDate()} ${monthName(d.getMonth())}: ${stateLabel(info)}${info.plan ? ', ' + info.plan.name : ''}`}
                   aria-pressed={info.date === sel}
+                  data-plan={info.plan?.id}
                   onClick={() => setSel(info.date)}
                 >
                   {d.getDate()}
@@ -97,7 +99,7 @@ export function Calendar() {
 
       <DayPanel date={sel} />
       {view === 'settimana' && <WeekList date={sel} onSelect={setSel} />}
-    </main>
+    </Wrap>
   );
 }
 
@@ -139,7 +141,7 @@ function originOf(date: string, moves: Record<string, string>, info: DateInfo): 
   return info.plan ? date : null;
 }
 
-function DayPanel({ date }: { date: string }) {
+export function DayPanel({ date }: { date: string }) {
   const { sessions, settings, calibration, active } = useData();
   const update = useSettingsUpdater();
   const today = iso(new Date());
@@ -149,7 +151,7 @@ function DayPanel({ date }: { date: string }) {
   const origin = originOf(date, settings.moves, info);
   const d = parseIso(date);
   const isPast = date < today;
-  const slots = info.plan ? effectiveDay(info.plan.id, settings, calibration) : [];
+  const slots = info.plan ? slotsForPlanDay(info.plan, settings, calibration) : [];
 
   const setMoveTo = (from: string, target: string | null) =>
     update((s) => {
@@ -198,14 +200,14 @@ function DayPanel({ date }: { date: string }) {
               <button
                 className="btn primary"
                 onClick={async () => {
-                  await startSession(info.plan!.id, settings, calibration, sessions);
+                  await startPlanDay(info.plan!, settings, calibration, sessions);
                   navigate('/allenamento');
                 }}
               >
                 <Play size={16} fill="currentColor" /> Inizia
               </button>
             )}
-            <button className="btn" onClick={() => navigate(`/giorno/${info.plan!.id}`)}>
+            <button className="btn" onClick={() => navigate(dayLink(info.plan!))}>
               Apri
             </button>
             {origin && (

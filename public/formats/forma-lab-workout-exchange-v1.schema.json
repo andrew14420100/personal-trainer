@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forma-lab.pages.dev/formats/forma-lab-workout-exchange-v1.schema.json",
+  "title": "FORMA LAB Workout Exchange — versione 1",
+  "description": "Formato aperto per scambiare programmi di allenamento multi-giornata e multi-settimana con FORMA LAB. Specifica completa: docs/FORMATO_SCHEDE_v1.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "program"],
+  "properties": {
+    "$schema": { "type": "string", "maxLength": 200 },
+    "format": { "const": "forma-lab-workout-exchange" },
+    "version": { "const": 1 },
+    "generator": { "type": "string", "maxLength": 100, "description": "Chi ha prodotto il file, es. \"ChatGPT\"." },
+    "exportedAt": { "type": "string", "maxLength": 40, "description": "Data ISO 8601 facoltativa." },
+    "program": { "$ref": "#/$defs/program" }
+  },
+  "$defs": {
+    "text": { "type": "string", "maxLength": 1000 },
+    "weekday": { "enum": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"] },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": { "min": { "type": "integer", "minimum": 1 }, "max": { "type": "integer", "minimum": 1 } }
+    },
+    "program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "goal", "level", "durationWeeks", "daysPerWeek", "days"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "$ref": "#/$defs/text" },
+        "author": { "type": "string", "maxLength": 80 },
+        "goal": { "enum": ["massa", "forza", "ricomposizione", "dimagrimento", "resistenza", "salute", "altro"] },
+        "level": { "enum": ["principiante", "intermedio", "avanzato"] },
+        "durationWeeks": { "type": "integer", "minimum": 1, "maximum": 52 },
+        "daysPerWeek": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "recommendedWeekdays": { "type": "array", "items": { "$ref": "#/$defs/weekday" }, "maxItems": 7 },
+        "progression": { "$ref": "#/$defs/text" },
+        "phases": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/phase" } },
+        "days": { "type": "array", "minItems": 1, "maxItems": 14, "items": { "$ref": "#/$defs/day" } }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "fromWeek", "toWeek"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "fromWeek": { "type": "integer", "minimum": 1, "maximum": 52 },
+        "toWeek": { "type": "integer", "minimum": 1, "maximum": 52 },
+        "deload": { "type": "boolean", "description": "Settimane di scarico: l'app usa il 60% delle serie." },
+        "setsDelta": { "type": "integer", "minimum": -5, "maximum": 5, "description": "Serie aggiunte (o tolte) a ogni esercizio nella fase." },
+        "rpe": { "type": "number", "minimum": 5, "maximum": 10 },
+        "rir": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "notes": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "day": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "exercises"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,39}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "weekday": { "$ref": "#/$defs/weekday" },
+        "muscleGroups": { "type": "array", "items": { "type": "string", "maxLength": 200 }, "maxItems": 20 },
+        "notes": { "$ref": "#/$defs/text" },
+        "exercises": { "type": "array", "minItems": 1, "maxItems": 30, "items": { "$ref": "#/$defs/exercise" } }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sets", "restSec"],
+      "oneOf": [{ "required": ["reps"] }, { "required": ["durationSec"] }],
+      "properties": {
+        "exerciseId": { "type": "string", "maxLength": 80, "description": "Identificatore ufficiale FORMA LAB, se noto (es. \"lat-pulldown-wide\")." },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100, "description": "Nome in italiano." },
+        "nameEn": { "type": "string", "maxLength": 100 },
+        "equipment": { "type": "string", "maxLength": 80 },
+        "sets": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "reps": { "allOf": [{ "$ref": "#/$defs/range" }], "description": "Ripetizioni minime e massime." },
+        "durationSec": { "allOf": [{ "$ref": "#/$defs/range" }], "description": "Durata in secondi (esercizi a tempo e cardio)." },
+        "perSide": { "type": "boolean" },
+        "restSec": { "type": "integer", "minimum": 0, "maximum": 600 },
+        "load": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "unit"],
+          "properties": { "value": { "type": "number", "minimum": 0, "maximum": 1000 }, "unit": { "enum": ["kg", "lb", "%1RM"] } },
+          "description": "Solo se il programma indica davvero un carico."
+        },
+        "rpe": { "type": "number", "minimum": 5, "maximum": 10 },
+        "rir": { "type": "integer", "minimum": 0, "maximum": 6 },
+        "group": { "type": "string", "pattern": "^[A-Z]$", "description": "Stessa lettera su esercizi consecutivi = superserie (2) o giant set (3+)." },
+        "warmupSets": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "notes": { "$ref": "#/$defs/text" },
+        "alternatives": { "type": "array", "items": { "type": "string", "maxLength": 100 }, "maxItems": 10 }
+      }
+    }
+  }
+}

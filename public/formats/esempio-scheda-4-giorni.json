@@ -1,0 +1,389 @@
+{
+  "$schema": "https://forma-lab.pages.dev/formats/forma-lab-workout-exchange-v1.schema.json",
+  "format": "forma-lab-workout-exchange",
+  "version": 1,
+  "generator": "FORMA LAB 5.0 (esempio)",
+  "program": {
+    "name": "Scheda FORMA LAB (4 giorni)",
+    "description": "Upper/Lower su 4 giorni: Lunedì, Martedì, Giovedì, Venerdì.",
+    "goal": "ricomposizione",
+    "level": "principiante",
+    "durationWeeks": 8,
+    "daysPerWeek": 4,
+    "recommendedWeekdays": [
+      "lunedi",
+      "martedi",
+      "giovedi",
+      "venerdi"
+    ],
+    "days": [
+      {
+        "id": "upper-a",
+        "name": "Petto, schiena e braccia",
+        "weekday": "lunedi",
+        "muscleGroups": [
+          "Petto",
+          "Schiena",
+          "Spalle",
+          "Bicipiti",
+          "Tricipiti"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "chest-press",
+            "name": "Chest Press",
+            "nameEn": "Machine Chest Press",
+            "equipment": "Macchina chest press (seduta)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "lat-pulldown-wide",
+            "name": "Lat Machine presa prona",
+            "nameEn": "Wide-Grip Lat Pulldown",
+            "equipment": "Lat machine, barra lunga",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "incline-db-press",
+            "name": "Panca inclinata con manubri",
+            "nameEn": "Incline Dumbbell Press",
+            "equipment": "Panca regolabile, manubri",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "cable-row-v",
+            "name": "Pulley triangolo",
+            "nameEn": "Seated Cable Row (V-grip)",
+            "equipment": "Pulley basso con maniglia a triangolo",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "lateral-raise",
+            "name": "Alzate laterali con manubri",
+            "nameEn": "Dumbbell Lateral Raise",
+            "equipment": "Manubri leggeri",
+            "sets": 2,
+            "reps": {
+              "min": 12,
+              "max": 20
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "triceps-pushdown",
+            "name": "Pushdown tricipiti",
+            "nameEn": "Cable Triceps Pushdown",
+            "equipment": "Cavo alto con barra o corda",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "db-curl",
+            "name": "Curl con manubri",
+            "nameEn": "Dumbbell Biceps Curl",
+            "equipment": "Manubri",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          }
+        ]
+      },
+      {
+        "id": "lower-a",
+        "name": "Gambe: quadricipiti e femorali",
+        "weekday": "martedi",
+        "muscleGroups": [
+          "Quadricipiti",
+          "Femorali",
+          "Glutei",
+          "Polpacci",
+          "Addome"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "leg-press",
+            "name": "Leg Press",
+            "equipment": "Leg press (45° o orizzontale)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "db-rdl",
+            "name": "Stacco rumeno con manubri",
+            "nameEn": "Dumbbell Romanian Deadlift",
+            "equipment": "Manubri",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "leg-extension",
+            "name": "Leg Extension",
+            "equipment": "Macchina leg extension",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "seated-leg-curl",
+            "name": "Leg Curl seduto",
+            "nameEn": "Seated Leg Curl",
+            "equipment": "Macchina leg curl seduto",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "calf-raise",
+            "name": "Calf Raise",
+            "nameEn": "Standing Calf Raise",
+            "equipment": "Macchina calf in piedi (o leg press / Multipower)",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "plank",
+            "name": "Plank",
+            "nameEn": "Forearm Plank",
+            "equipment": "Tappetino",
+            "sets": 2,
+            "durationSec": {
+              "min": 20,
+              "max": 40
+            },
+            "restSec": 60
+          }
+        ]
+      },
+      {
+        "id": "upper-b",
+        "name": "Petto alto, schiena e spalle",
+        "weekday": "giovedi",
+        "muscleGroups": [
+          "Petto alto",
+          "Schiena",
+          "Spalle",
+          "Bicipiti",
+          "Tricipiti"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "smith-incline-press",
+            "name": "Panca inclinata 30° al Multipower",
+            "nameEn": "Smith Machine Incline Bench Press (30°)",
+            "equipment": "Multipower (Smith machine), panca regolabile",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "low-row-machine",
+            "name": "Low Row Machine",
+            "nameEn": "Machine Low Row",
+            "equipment": "Macchina low row (con o senza appoggio al petto)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "pec-fly",
+            "name": "Pec Fly Machine",
+            "nameEn": "Pec Deck / Machine Fly",
+            "equipment": "Macchina pec deck / butterfly",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "lat-pulldown-neutral",
+            "name": "Lat Machine presa neutra",
+            "nameEn": "Neutral-Grip Lat Pulldown",
+            "equipment": "Lat machine con maniglia a presa neutra (stretta o media)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "shoulder-press-machine",
+            "name": "Shoulder Press Machine",
+            "nameEn": "Machine Shoulder Press",
+            "equipment": "Macchina shoulder press",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "incline-db-curl",
+            "name": "Curl su panca inclinata",
+            "nameEn": "Incline Dumbbell Curl",
+            "equipment": "Panca inclinata (45–60°), manubri",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "overhead-cable-triceps",
+            "name": "Estensioni tricipiti al cavo",
+            "nameEn": "Overhead Cable Triceps Extension",
+            "equipment": "Cavo con corda",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          }
+        ]
+      },
+      {
+        "id": "lower-b",
+        "name": "Glutei e gambe",
+        "weekday": "venerdi",
+        "muscleGroups": [
+          "Glutei",
+          "Quadricipiti",
+          "Femorali",
+          "Polpacci",
+          "Addome"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "hack-squat",
+            "name": "Hack Squat",
+            "nameEn": "Machine Hack Squat",
+            "equipment": "Macchina hack squat",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "hip-thrust-machine",
+            "name": "Hip Thrust Machine",
+            "nameEn": "Machine Hip Thrust",
+            "equipment": "Macchina hip thrust (glute drive)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "assisted-split-squat",
+            "name": "Split Squat assistito",
+            "nameEn": "Assisted (Supported) Split Squat",
+            "equipment": "Supporto per le mani (rack, Multipower, TRX); manubri opzionali",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "perSide": true,
+            "restSec": 120
+          },
+          {
+            "exerciseId": "lying-leg-curl",
+            "name": "Leg Curl",
+            "nameEn": "Lying (Prone) Leg Curl",
+            "equipment": "Macchina leg curl sdraiato (in alternativa seduto)",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "calf-raise",
+            "name": "Calf Raise",
+            "nameEn": "Standing Calf Raise",
+            "equipment": "Macchina calf in piedi (o leg press / Multipower)",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "dead-bug",
+            "name": "Dead Bug",
+            "equipment": "Tappetino",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 10
+            },
+            "perSide": true,
+            "restSec": 60
+          }
+        ]
+      }
+    ]
+  }
+}

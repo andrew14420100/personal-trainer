@@ -1,33 +1,63 @@
-import { useEffect, useRef } from 'react';
-import { CalendarDays, Dumbbell, Home, LineChart, Minus, Pause, Play, Plus, SkipForward, User } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { activeElapsed } from '../lib/stats';
+import { Activity, CalendarDays, Dumbbell, Home, LayoutGrid, Library, LineChart, Minus, Pause, Play, Plus, SkipForward } from 'lucide-react';
 import { navigate, useRoute } from '../lib/router';
 import { beep, formatClock, timer, useTimer } from '../lib/timer';
 import { useData } from '../app/store';
 
-const TABS = [
-  { path: '', label: 'Oggi', icon: Home },
-  { path: 'allenamenti', label: 'Allenamenti', icon: Dumbbell },
-  { path: 'calendario', label: 'Calendario', icon: CalendarDays },
-  { path: 'progressi', label: 'Progressi', icon: LineChart },
-  { path: 'profilo', label: 'Profilo', icon: User },
+export const TAB_DEFS: Record<string, { label: string; icon: typeof Home; to: string; match: string[] }> = {
+  '': { label: 'Oggi', icon: Home, to: '/', match: [''] },
+  agenda: { label: 'Agenda', icon: CalendarDays, to: '/agenda', match: ['agenda', 'calendario'] },
+  allenati: { label: 'Allenati', icon: Dumbbell, to: '/allenamenti', match: ['allenamenti', 'giorno', 'esercizio', 'routine', 'strumenti', 'importa', 'programma', 'schede'] },
+  progressi: { label: 'Progressi', icon: LineChart, to: '/progressi', match: ['progressi', 'sessione'] },
+  altro: { label: 'Altro', icon: LayoutGrid, to: '/altro', match: ['altro', 'profilo', 'videoteca'] },
+  libreria: { label: 'Esercizi', icon: Library, to: '/libreria', match: ['libreria'] },
+};
+export const TAB_PRESETS: { id: string; label: string; tabs: string[] }[] = [
+  { id: 'standard', label: 'Standard: Oggi · Agenda · Allenati · Progressi · Altro', tabs: ['', 'agenda', 'allenati', 'progressi', 'altro'] },
+  { id: 'palestra', label: 'Palestra: Oggi · Allenati · Esercizi · Progressi · Altro', tabs: ['', 'allenati', 'libreria', 'progressi', 'altro'] },
+  { id: 'agenda', label: 'Agenda prima: Agenda · Oggi · Allenati · Progressi · Altro', tabs: ['agenda', '', 'allenati', 'progressi', 'altro'] },
 ];
-const PARENT: Record<string, string> = { giorno: 'allenamenti', esercizio: 'allenamenti', routine: 'allenamenti', libreria: 'allenamenti', strumenti: 'allenamenti', sessione: 'progressi', videoteca: 'profilo' };
 
 export function TabBar() {
   const { path } = useRoute();
+  const { settings } = useData();
   const root = path[0] ?? '';
-  const active = PARENT[root] ?? root;
+  const tabs = (settings.tabs?.length === 5 ? settings.tabs : ['', 'agenda', 'allenati', 'progressi', 'altro']).filter((t) => TAB_DEFS[t]);
   return (
     <div className="tabbar">
       <nav aria-label="Navigazione principale">
-        {TABS.map((t) => (
-          <button key={t.path} className="tab" aria-current={active === t.path ? 'page' : undefined} onClick={() => navigate('/' + t.path)}>
-            <t.icon size={22} strokeWidth={active === t.path ? 2.3 : 1.8} aria-hidden />
-            {t.label}
-          </button>
-        ))}
+        {tabs.map((id) => {
+          const t = TAB_DEFS[id];
+          const on = t.match.includes(root);
+          return (
+            <button key={id || 'oggi'} className="tab" aria-current={on ? 'page' : undefined} onClick={() => navigate(t.to)}>
+              <t.icon size={22} strokeWidth={on ? 2.3 : 1.8} aria-hidden />
+              {t.label}
+            </button>
+          );
+        })}
       </nav>
     </div>
+  );
+}
+
+/** Always-visible pill while a workout is running (outside workout mode). */
+export function LivePill() {
+  const { active } = useData();
+  const { state } = useTimer();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!active || active.pausedAt) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  if (!active || state) return null;
+  return (
+    <button className="live-pill" onClick={() => navigate('/allenamento')} aria-label="Torna all’allenamento in corso">
+      <Activity size={18} /> {active.pausedAt ? 'Allenamento in pausa' : 'Allenamento in corso'}
+      <span className="t">{formatClock(activeElapsed(active, active.pausedAt ?? now))}</span>
+    </button>
   );
 }
 

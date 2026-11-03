@@ -11,7 +11,9 @@ import { timer } from '../lib/timer';
 import { navigate } from '../lib/router';
 import type { MigrationReport } from '../lib/migration';
 import type { Settings as S } from '../lib/settings';
+import { updateSettings } from '../lib/settings';
 import { remindersIcs, setsCsv } from '../lib/exports';
+import { defaultName } from '../lib/library';
 import { MUSCLE_LABEL } from '../data/muscles';
 import { Acc, AppBar, Confirm, Notice, Section, Seg, Sheet, Switch, toast } from './kit';
 
@@ -89,7 +91,16 @@ export function Profile() {
 
       <Section title="Scheda">
         <div className="list">
-          {DAYS.map((d) => (
+          <button className="list-row" onClick={() => navigate('/schede')}>
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                Gestisci schede
+              </span>
+              <span className="t-xs c3">Predefinito: {defaultName(settings)} · elimina, archivia, duplica, cambia predefinito</span>
+            </span>
+            <ChevronRight size={18} className="c3" />
+          </button>
+          {!settings.originalHidden && DAYS.map((d) => (
             <button key={d.id} className="list-row" style={{ ['--day' as string]: d.accent }} onClick={() => navigate(`/giorno/${d.id}/modifica`)}>
               <span className="dot" />
               <span className="grow">
@@ -181,7 +192,7 @@ export function Profile() {
           </ul>
           <p className="t-xs c2">Video: proprietà dei rispettivi autori, incorporati con il player ufficiale YouTube senza modifiche. Caratteri: Manrope e Inter (SIL OFL). Icone: Lucide (ISC).</p>
           <p className="t-xs c3">
-            Le indicazioni tecniche sono informative e non sostituiscono un medico o un professionista. FORMA LAB 4.1 · build {__BUILD_DATE__}
+            Le indicazioni tecniche sono informative e non sostituiscono un medico o un professionista. FORMA LAB 5.0 · build {__BUILD_DATE__}
             {__PREVIEW__ ? ' · ANTEPRIMA' : ''}
           </p>
         </Acc>
@@ -236,6 +247,8 @@ function BackupTools() {
   const [importPass, setImportPass] = useState('');
   const [mode, setMode] = useState<'merge' | 'replace'>('merge');
   const [wipe, setWipe] = useState(false);
+  const [wipe2, setWipe2] = useState(false);
+  const [typed, setTyped] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
   const doExport = async () => {
     if (encrypt && (pass.length < 8 || pass !== pass2)) return toast(pass.length < 8 ? 'Passphrase di almeno 8 caratteri' : 'Le passphrase non coincidono');
@@ -244,6 +257,7 @@ function BackupTools() {
       const b = makeBackup(await snapshot());
       const content = encrypt ? JSON.stringify(await encryptBackup(b, pass)) : JSON.stringify(b, null, 1);
       const how = await deliverFile(backupFileName(encrypt), content);
+      await updateSettings((st) => ({ ...st, lastBackupAt: Date.now() }));
       toast(how === 'shared' ? 'Backup pronto: salvalo in File o iCloud Drive' : 'Backup scaricato');
       setPass('');
       setPass2('');
@@ -336,14 +350,32 @@ function BackupTools() {
         onClose={() => setWipe(false)}
         title="Cancellare tutti i dati?"
         body="Allenamenti, misure, note, impostazioni, video caricati e la copia di sicurezza della versione precedente verranno eliminati da questo dispositivo. Esporta prima un backup."
-        confirmLabel="Cancella tutto"
+        confirmLabel="Continua"
         danger
-        onConfirm={async () => {
-          timer.stop();
-          await wipeAll();
-          toast('Dati cancellati');
-        }}
+        onConfirm={() => setWipe2(true)}
       />
+      <Sheet open={wipe2} onClose={() => (setWipe2(false), setTyped(''))} label="Conferma definitiva">
+        <div className="col">
+          <h3 className="t-h2">Conferma definitiva</h3>
+          <p className="t-sm c2" style={{ margin: 0 }}>
+            Seconda conferma: scrivi <b>CANCELLA</b> per eliminare tutti i dati da questo dispositivo. L’operazione non si può annullare.
+          </p>
+          <input className="input" aria-label="Scrivi CANCELLA per confermare" value={typed} onChange={(e) => setTyped(e.target.value)} autoCapitalize="characters" />
+          <button
+            className="btn danger lg block"
+            disabled={typed.trim() !== 'CANCELLA'}
+            onClick={async () => {
+              timer.stop();
+              await wipeAll();
+              setWipe2(false);
+              setTyped('');
+              toast('Dati cancellati');
+            }}
+          >
+            Cancella tutti i dati
+          </button>
+        </div>
+      </Sheet>
     </div>
   );
 }

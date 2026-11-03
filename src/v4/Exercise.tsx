@@ -14,7 +14,8 @@ import { navigate } from '../lib/router';
 import { Anatomy } from '../components/Anatomy';
 import { ChartCard } from '../components/Charts';
 import { UserVideo, useMedia } from '../components/UserVideo';
-import { VideoReview } from '../components/VideoReview';
+import { allExercises, sourceOf } from '../data/catalog';
+import { Archive, ArchiveRestore, Star } from 'lucide-react';
 import { Acc, Empty, NavBar, Notice, Seg } from './kit';
 import { Player } from './Player';
 
@@ -30,6 +31,12 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
   const [note, setNote] = useState('');
   const [metric, setMetric] = useState<'carico' | 'rip' | 'volume'>('carico');
   useEffect(() => setNote(settings.notes[id] ?? ''), [id, settings.notes]);
+  // remember as recently viewed (most recent first, max 30)
+  useEffect(() => {
+    if (!EXERCISE_BY_ID[id] || settings.recentExercises[0] === id) return;
+    void update((s) => ({ ...s, recentExercises: [id, ...s.recentExercises.filter((x) => x !== id)].slice(0, 30) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
   if (!ex)
     return (
       <main className="page">
@@ -63,8 +70,32 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
       <h1 className="t-h1" style={{ marginTop: 2 }}>
         {ex.name}
       </h1>
+      <div className="row wrap mt8" style={{ gap: 6 }}>
+        <button
+          className={`btn sm${settings.favorites.includes(id) ? ' primary' : ''}`}
+          aria-pressed={settings.favorites.includes(id)}
+          onClick={() => update((st) => ({ ...st, favorites: st.favorites.includes(id) ? st.favorites.filter((x) => x !== id) : [...st.favorites, id] }))}
+        >
+          <Star size={14} /> {settings.favorites.includes(id) ? 'Preferito' : 'Aggiungi ai preferiti'}
+        </button>
+        {sourceOf(id) !== 'scheda' && (
+          <button
+            className="btn sm ghost"
+            onClick={() => update((st) => ({ ...st, archivedExercises: st.archivedExercises.includes(id) ? st.archivedExercises.filter((x) => x !== id) : [...st.archivedExercises, id] }))}
+          >
+            {settings.archivedExercises.includes(id) ? <ArchiveRestore size={14} /> : <Archive size={14} />} {settings.archivedExercises.includes(id) ? 'Ripristina dall’archivio' : 'Archivia'}
+          </button>
+        )}
+      </div>
+      {ex.source && (
+        <p className="t-xs c3 mt8" style={{ marginBottom: 0 }}>
+          Dati di catalogo da {ex.source.name} ({ex.source.license}){ex.source.autoName ? `; nome italiano tradotto automaticamente dall’originale “${ex.nameEn}”` : ''}. Istruzioni tecniche e video non ancora disponibili né verificati per questo esercizio.
+        </p>
+      )}
       <p className="t-sm c3" style={{ marginTop: 2 }}>
         {ex.nameEn} · {ex.equipment}
+        {ex.level ? ` · ${ex.level}` : ''}
+        {ex.movement ? ` · ${ex.movement}` : ''}
       </p>
 
       {/* ── Video ─────────────────────────────── */}
@@ -93,10 +124,14 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
               {video.match === 'variante simile' && <span className="c-accent"> Variante simile: {video.note ?? 'attrezzo o impugnatura diversi da quelli della scheda.'}</span>}
               {video.match === 'esatto' && video.note ? ` ${video.note}.` : ''}
             </div>
-            <VideoReview youtubeId={video.youtubeId} />
+            <div className="chips mt8">
+              <span className={`chip sm ${video.match === 'esatto' ? 'ok' : 'warn'}`}>{video.match === 'esatto' ? 'Video reale · incorporabile, da provare su iPhone' : 'Variante simile'}</span>
+            </div>
           </>
         ) : (
-          <Notice icon={<AlertTriangle size={17} color="var(--warn)" />}>Nessun video reale verificato per questo esercizio.</Notice>
+          <Notice icon={<AlertTriangle size={17} color="var(--warn)" />}>
+            Nessun video idoneo trovato per questo esercizio. Non mostriamo filmati non pertinenti: puoi aggiungere un tuo video qui sotto.
+          </Notice>
         )}
       </div>
 
@@ -268,6 +303,7 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
       </Acc>
 
       {/* ── Personal ──────────────────────────── */}
+      <AltList id={id} />
       <h2 className="t-h2 mt24" style={{ marginBottom: 10 }}>
         I tuoi dati
       </h2>
@@ -335,5 +371,33 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
         />
       </div>
     </main>
+  );
+}
+
+/** Equivalent alternatives: same main muscle, different equipment first (useful when a machine is busy). */
+function AltList({ id }: { id: string }) {
+  const m = EXERCISE_MUSCLES[id];
+  if (!m?.primary.length) return null;
+  const me = EXERCISE_BY_ID[id];
+  const alts = allExercises()
+    .filter((e) => e.id !== id && e.tracking === me?.tracking && EXERCISE_MUSCLES[e.id]?.primary[0] === m.primary[0])
+    .sort((a, b) => Number(b.equipment !== me?.equipment) - Number(a.equipment !== me?.equipment) || Number(sourceOf(a.id) !== 'scheda') - Number(sourceOf(b.id) !== 'scheda'))
+    .slice(0, 6);
+  if (!alts.length) return null;
+  return (
+    <Acc title="Alternative equivalenti (stessi muscoli)" icon={<Repeat size={18} className="c3" />}>
+      <div className="list">
+        {alts.map((e) => (
+          <button key={e.id} className="list-row" onClick={() => navigate(`/esercizio/${e.id}`)}>
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                {e.name}
+              </span>
+              <span className="t-xs c3">{e.equipment}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </Acc>
   );
 }
