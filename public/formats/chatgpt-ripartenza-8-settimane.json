@@ -1,0 +1,431 @@
+{
+  "$schema": "https://forma-lab.pages.dev/formats/forma-lab-workout-exchange-v1.schema.json",
+  "format": "forma-lab-workout-exchange",
+  "version": 1,
+  "generator": "ChatGPT · FORMA LAB",
+  "program": {
+    "name": "Ripartenza intelligente — Massa e ricomposizione (8 settimane)",
+    "description": "Upper/Lower di ripresa dopo oltre un anno di pausa: 4 giorni, circa 60 minuti, tecnica prioritaria e progressione prudente. Da adattare al recupero reale.",
+    "goal": "ricomposizione",
+    "level": "principiante",
+    "durationWeeks": 8,
+    "daysPerWeek": 4,
+    "recommendedWeekdays": [
+      "lunedi",
+      "martedi",
+      "giovedi",
+      "venerdi"
+    ],
+    "days": [
+      {
+        "id": "upper-a",
+        "name": "Petto, schiena e braccia",
+        "weekday": "lunedi",
+        "muscleGroups": [
+          "Petto",
+          "Schiena",
+          "Spalle",
+          "Bicipiti",
+          "Tricipiti"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "chest-press",
+            "name": "Chest Press",
+            "nameEn": "Machine Chest Press",
+            "equipment": "Macchina chest press (seduta)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120,
+            "warmupSets": 2
+          },
+          {
+            "exerciseId": "lat-pulldown-wide",
+            "name": "Lat Machine presa prona",
+            "nameEn": "Wide-Grip Lat Pulldown",
+            "equipment": "Lat machine, barra lunga",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "incline-db-press",
+            "name": "Panca inclinata con manubri",
+            "nameEn": "Incline Dumbbell Press",
+            "equipment": "Panca regolabile, manubri",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "cable-row-v",
+            "name": "Pulley triangolo",
+            "nameEn": "Seated Cable Row (V-grip)",
+            "equipment": "Pulley basso con maniglia a triangolo",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "lateral-raise",
+            "name": "Alzate laterali con manubri",
+            "nameEn": "Dumbbell Lateral Raise",
+            "equipment": "Manubri leggeri",
+            "sets": 2,
+            "reps": {
+              "min": 12,
+              "max": 18
+            },
+            "restSec": 60
+          },
+          {
+            "exerciseId": "triceps-pushdown",
+            "name": "Pushdown tricipiti",
+            "nameEn": "Cable Triceps Pushdown",
+            "equipment": "Cavo alto con barra o corda",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 60
+          },
+          {
+            "exerciseId": "db-curl",
+            "name": "Curl con manubri",
+            "nameEn": "Dumbbell Biceps Curl",
+            "equipment": "Manubri",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 60
+          }
+        ],
+        "notes": "Riscaldamento generale 5–8 minuti e avvicinamento alla Chest Press."
+      },
+      {
+        "id": "lower-a",
+        "name": "Gambe: quadricipiti e femorali",
+        "weekday": "martedi",
+        "muscleGroups": [
+          "Quadricipiti",
+          "Femorali",
+          "Glutei",
+          "Polpacci",
+          "Addome"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "leg-press",
+            "name": "Leg Press",
+            "equipment": "Leg press (45° o orizzontale)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 150,
+            "warmupSets": 2
+          },
+          {
+            "exerciseId": "db-rdl",
+            "name": "Stacco rumeno con manubri",
+            "nameEn": "Dumbbell Romanian Deadlift",
+            "equipment": "Manubri",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 150
+          },
+          {
+            "exerciseId": "leg-extension",
+            "name": "Leg Extension",
+            "equipment": "Macchina leg extension",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 75
+          },
+          {
+            "exerciseId": "seated-leg-curl",
+            "name": "Leg Curl seduto",
+            "nameEn": "Seated Leg Curl",
+            "equipment": "Macchina leg curl seduto",
+            "sets": 3,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "calf-raise",
+            "name": "Calf Raise",
+            "nameEn": "Standing Calf Raise",
+            "equipment": "Macchina calf in piedi (o leg press / Multipower)",
+            "sets": 2,
+            "reps": {
+              "min": 12,
+              "max": 20
+            },
+            "restSec": 60
+          },
+          {
+            "exerciseId": "plank",
+            "name": "Plank",
+            "nameEn": "Forearm Plank",
+            "equipment": "Tappetino",
+            "sets": 2,
+            "durationSec": {
+              "min": 25,
+              "max": 40
+            },
+            "restSec": 60
+          }
+        ],
+        "notes": "Attenzione alla tecnica nello stacco rumeno e al controllo del bacino nella Leg Press."
+      },
+      {
+        "id": "upper-b",
+        "name": "Petto alto, schiena e spalle",
+        "weekday": "giovedi",
+        "muscleGroups": [
+          "Petto alto",
+          "Schiena",
+          "Spalle",
+          "Bicipiti",
+          "Tricipiti"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "smith-incline-press",
+            "name": "Panca inclinata 30° al Multipower",
+            "nameEn": "Smith Machine Incline Bench Press (30°)",
+            "equipment": "Multipower (Smith machine), panca regolabile",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120,
+            "warmupSets": 2
+          },
+          {
+            "exerciseId": "low-row-machine",
+            "name": "Low Row Machine",
+            "nameEn": "Machine Low Row",
+            "equipment": "Macchina low row (con o senza appoggio al petto)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "pec-fly",
+            "name": "Pec Fly Machine",
+            "nameEn": "Pec Deck / Machine Fly",
+            "equipment": "Macchina pec deck / butterfly",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 75
+          },
+          {
+            "exerciseId": "lat-pulldown-neutral",
+            "name": "Lat Machine presa neutra",
+            "nameEn": "Neutral-Grip Lat Pulldown",
+            "equipment": "Lat machine con maniglia a presa neutra (stretta o media)",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 12
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "shoulder-press-machine",
+            "name": "Shoulder Press Machine",
+            "nameEn": "Machine Shoulder Press",
+            "equipment": "Macchina shoulder press",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 90
+          },
+          {
+            "exerciseId": "incline-db-curl",
+            "name": "Curl su panca inclinata",
+            "nameEn": "Incline Dumbbell Curl",
+            "equipment": "Panca inclinata (45–60°), manubri",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 60
+          },
+          {
+            "exerciseId": "overhead-cable-triceps",
+            "name": "Estensioni tricipiti al cavo",
+            "nameEn": "Overhead Cable Triceps Extension",
+            "equipment": "Cavo con corda",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 60
+          }
+        ],
+        "notes": "Movimenti controllati, senza inseguire il cedimento."
+      },
+      {
+        "id": "lower-b",
+        "name": "Glutei e gambe",
+        "weekday": "venerdi",
+        "muscleGroups": [
+          "Glutei",
+          "Quadricipiti",
+          "Femorali",
+          "Polpacci",
+          "Addome"
+        ],
+        "exercises": [
+          {
+            "exerciseId": "hack-squat",
+            "name": "Hack Squat",
+            "nameEn": "Machine Hack Squat",
+            "equipment": "Macchina hack squat",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 150,
+            "warmupSets": 2
+          },
+          {
+            "exerciseId": "hip-thrust-machine",
+            "name": "Hip Thrust Machine",
+            "nameEn": "Machine Hip Thrust",
+            "equipment": "Macchina hip thrust (glute drive)",
+            "sets": 3,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "restSec": 120
+          },
+          {
+            "exerciseId": "assisted-split-squat",
+            "name": "Split Squat assistito",
+            "nameEn": "Assisted (Supported) Split Squat",
+            "equipment": "Supporto per le mani (rack, Multipower, TRX); manubri opzionali",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "perSide": true,
+            "restSec": 120
+          },
+          {
+            "exerciseId": "lying-leg-curl",
+            "name": "Leg Curl",
+            "nameEn": "Lying (Prone) Leg Curl",
+            "equipment": "Macchina leg curl sdraiato (in alternativa seduto)",
+            "sets": 2,
+            "reps": {
+              "min": 10,
+              "max": 15
+            },
+            "restSec": 75
+          },
+          {
+            "exerciseId": "calf-raise",
+            "name": "Calf Raise",
+            "nameEn": "Standing Calf Raise",
+            "equipment": "Macchina calf in piedi (o leg press / Multipower)",
+            "sets": 2,
+            "reps": {
+              "min": 12,
+              "max": 20
+            },
+            "restSec": 60
+          },
+          {
+            "exerciseId": "dead-bug",
+            "name": "Dead Bug",
+            "equipment": "Tappetino",
+            "sets": 2,
+            "reps": {
+              "min": 8,
+              "max": 12
+            },
+            "perSide": true,
+            "restSec": 60
+          }
+        ],
+        "notes": "Riscaldamento alla Hack Squat, attenzione allo Split Squat per gamba."
+      }
+    ],
+    "author": "ChatGPT",
+    "progression": "Prima e seconda settimana: RIR 3–4 e una serie in meno per esercizio. Dalla terza: RIR ~2. Quando completi tutte le serie al massimo del range con tecnica stabile e RIR previsto, aumenta del minimo disponibile alla seduta successiva (circa 1–2 kg per manubrio oppure 2,5–5% sulle macchine); altrimenti ripeti il carico. Riduci se perdi tecnica. Riscaldamento generale 5–8 minuti e serie progressive sui movimenti principali. Non ricercare il cedimento sistematico.",
+    "phases": [
+      {
+        "name": "Riadattamento",
+        "fromWeek": 1,
+        "toWeek": 2,
+        "setsDelta": -1,
+        "rir": 3,
+        "notes": "Serie ridotte, tecnica e confidenza; lascia 3–4 ripetizioni di margine."
+      },
+      {
+        "name": "Progressione",
+        "fromWeek": 3,
+        "toWeek": 6,
+        "rir": 2,
+        "notes": "Volume completo; aumenta prima le ripetizioni e poi il carico."
+      },
+      {
+        "name": "Consolidamento",
+        "fromWeek": 7,
+        "toWeek": 7,
+        "rir": 2,
+        "notes": "Consolida i miglioramenti senza test massimali."
+      },
+      {
+        "name": "Scarico e verifica",
+        "fromWeek": 8,
+        "toWeek": 8,
+        "deload": true,
+        "rir": 4,
+        "notes": "Meno serie e maggior margine, poi rivaluta tecnica e recupero."
+      }
+    ]
+  }
+}
