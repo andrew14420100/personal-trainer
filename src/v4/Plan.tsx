@@ -1,6 +1,7 @@
 import { Calculator, CheckCircle2, Folder, ChevronRight, Clock, Dumbbell, Layers, Library, Pencil, Play, PlayCircle, Plus, Timer } from 'lucide-react';
 import { allExercises } from '../data/catalog';
 import { FreeStartButton } from './Routines';
+import { ImportExchangeButton, ExportExchangeButton } from './ImportExchange';
 import { ProgramsSection } from './Programs';
 import { sessionMeta } from '../lib/meta';
 import { useData } from '../app/store';
@@ -72,7 +73,7 @@ export function Plan() {
 
       <ProgramsSection />
 
-      <Section title="Le mie schede" action={<button className="link" onClick={() => navigate('/routine/nuova')}>+ Nuova</button>}>
+      <Section title="Le mie schede" action={<div className="row wrap" style={{ gap: 6 }}><ImportExchangeButton /><ExportExchangeButton /><button className="link" onClick={() => navigate('/routine/nuova')}>+ Nuova</button></div>}>
         {settings.routines.length ? (
           <div className="col" style={{ gap: 12 }}>
             {[...new Set(settings.routines.map((r) => r.folder || ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b))).map((f) => (
