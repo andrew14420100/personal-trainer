@@ -1,0 +1,340 @@
+{
+  "format": "forma-lab-workout-exchange",
+  "version": 1,
+  "program": {
+    "id": "chatgpt-upper-lower-4-giorni",
+    "title": "Upper / Lower — 4 giorni",
+    "author": "ChatGPT",
+    "objective": "Massa muscolare e ricomposizione",
+    "level": "Ripresa dopo pausa",
+    "durationWeeks": null,
+    "folder": "Schede create con ChatGPT",
+    "notes": "Basata sui 4 allenamenti originali di FORMA LAB; la progressione si regola in base alle prestazioni reali."
+  },
+  "days": [
+    {
+      "id": "upper-a",
+      "weekday": 1,
+      "weekdayLabel": "Lunedì",
+      "name": "Petto, schiena e braccia",
+      "focus": [
+        "Petto",
+        "Schiena",
+        "Spalle",
+        "Bicipiti",
+        "Tricipiti"
+      ],
+      "exercises": [
+        {
+          "exerciseId": "chest-press",
+          "exerciseName": "Chest Press",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "lat-pulldown-wide",
+          "exerciseName": "Lat Machine presa prona",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "incline-db-press",
+          "exerciseName": "Panca inclinata con manubri",
+          "sets": 2,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "cable-row-v",
+          "exerciseName": "Pulley triangolo",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "lateral-raise",
+          "exerciseName": "Alzate laterali con manubri",
+          "sets": 2,
+          "repetitions": {
+            "min": 12,
+            "max": 20,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "triceps-pushdown",
+          "exerciseName": "Pushdown tricipiti",
+          "sets": 2,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "db-curl",
+          "exerciseName": "Curl con manubri",
+          "sets": 2,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lower-a",
+      "weekday": 2,
+      "weekdayLabel": "Martedì",
+      "name": "Gambe: quadricipiti e femorali",
+      "focus": [
+        "Quadricipiti",
+        "Femorali",
+        "Glutei",
+        "Polpacci",
+        "Addome"
+      ],
+      "exercises": [
+        {
+          "exerciseId": "leg-press",
+          "exerciseName": "Leg Press",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "db-rdl",
+          "exerciseName": "Stacco rumeno con manubri",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "leg-extension",
+          "exerciseName": "Leg Extension",
+          "sets": 2,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "seated-leg-curl",
+          "exerciseName": "Leg Curl seduto",
+          "sets": 3,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "calf-raise",
+          "exerciseName": "Calf Raise",
+          "sets": 3,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "plank",
+          "exerciseName": "Plank",
+          "sets": 2,
+          "repetitions": {
+            "min": 20,
+            "max": 40,
+            "unit": "seconds"
+          }
+        }
+      ]
+    },
+    {
+      "id": "upper-b",
+      "weekday": 4,
+      "weekdayLabel": "Giovedì",
+      "name": "Petto alto, schiena e spalle",
+      "focus": [
+        "Petto alto",
+        "Schiena",
+        "Spalle",
+        "Bicipiti",
+        "Tricipiti"
+      ],
+      "exercises": [
+        {
+          "exerciseId": "smith-incline-press",
+          "exerciseName": "Panca inclinata 30° al Multipower",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "low-row-machine",
+          "exerciseName": "Low Row Machine",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "pec-fly",
+          "exerciseName": "Pec Fly Machine",
+          "sets": 2,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "lat-pulldown-neutral",
+          "exerciseName": "Lat Machine presa neutra",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "shoulder-press-machine",
+          "exerciseName": "Shoulder Press Machine",
+          "sets": 2,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "incline-db-curl",
+          "exerciseName": "Curl su panca inclinata",
+          "sets": 2,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "overhead-cable-triceps",
+          "exerciseName": "Estensioni tricipiti al cavo",
+          "sets": 2,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lower-b",
+      "weekday": 5,
+      "weekdayLabel": "Venerdì",
+      "name": "Glutei e gambe",
+      "focus": [
+        "Glutei",
+        "Quadricipiti",
+        "Femorali",
+        "Polpacci",
+        "Addome"
+      ],
+      "exercises": [
+        {
+          "exerciseId": "hack-squat",
+          "exerciseName": "Hack Squat",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "hip-thrust-machine",
+          "exerciseName": "Hip Thrust Machine",
+          "sets": 3,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "assisted-split-squat",
+          "exerciseName": "Split Squat assistito",
+          "sets": 2,
+          "repetitions": {
+            "min": 8,
+            "max": 12,
+            "unit": "reps"
+          },
+          "perSide": true,
+          "sideLabel": "per gamba"
+        },
+        {
+          "exerciseId": "lying-leg-curl",
+          "exerciseName": "Leg Curl",
+          "sets": 3,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "calf-raise",
+          "exerciseName": "Calf Raise",
+          "sets": 3,
+          "repetitions": {
+            "min": 10,
+            "max": 15,
+            "unit": "reps"
+          }
+        },
+        {
+          "exerciseId": "dead-bug",
+          "exerciseName": "Dead Bug",
+          "sets": 2,
+          "repetitions": {
+            "min": 8,
+            "max": 10,
+            "unit": "reps"
+          },
+          "perSide": true,
+          "sideLabel": "per lato"
+        }
+      ]
+    }
+  ]
+}
