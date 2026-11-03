@@ -294,6 +294,8 @@ async function run(deviceName, label, full) {
   await page.getByRole('navigation').getByRole('button', { name: 'Profilo' }).click();
   check(`[${label}] profile: logout link`, (await page.locator('a[href="/__auth/logout"]').count()) === 1);
   if (full) {
+    // the card appears after an async read of the local database
+    await page.getByText('Dati della versione precedente').waitFor({ timeout: 5000 }).catch(() => {});
     check(`[${label}] profile: pre-4.0 copy listed`, await page.getByText('Dati della versione precedente').isVisible());
     await page.getByRole('switch', { name: 'Cifra il backup' }).click();
     const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Esporta tutti i dati' }).click()]);
