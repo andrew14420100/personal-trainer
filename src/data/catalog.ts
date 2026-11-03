@@ -7,6 +7,7 @@ import { EXERCISES, EXERCISE_BY_ID } from './exercises';
 import { EXERCISE_MUSCLES, MUSCLE_LABEL } from './muscles';
 import { LIBRARY, LIBRARY_MUSCLES, LIBRARY_PER_SIDE } from './library';
 import type { CustomExercise } from '../lib/settings';
+import { EXT_IDS } from './ext';
 
 for (const e of LIBRARY) EXERCISE_BY_ID[e.id] = e;
 Object.assign(EXERCISE_MUSCLES, LIBRARY_MUSCLES);
@@ -48,12 +49,12 @@ export function registerCustomExercises(list: CustomExercise[]) {
   }
 }
 
-export type Source = 'scheda' | 'libreria' | 'tuo';
-export const sourceOf = (id: string): Source => (PROGRAM_IDS.has(id) ? 'scheda' : customIds.includes(id) ? 'tuo' : 'libreria');
+export type Source = 'scheda' | 'libreria' | 'catalogo' | 'tuo';
+export const sourceOf = (id: string): Source => (PROGRAM_IDS.has(id) ? 'scheda' : customIds.includes(id) ? 'tuo' : id.startsWith('x-') ? 'catalogo' : 'libreria');
 
 /** Every exercise currently available (program, library, user). */
 export function allExercises(): Exercise[] {
-  return [...EXERCISES, ...LIBRARY, ...customIds.map((id) => EXERCISE_BY_ID[id]).filter(Boolean)];
+  return [...EXERCISES, ...LIBRARY, ...EXT_IDS.map((id) => EXERCISE_BY_ID[id]), ...customIds.map((id) => EXERCISE_BY_ID[id]).filter(Boolean)];
 }
 
 export const isPerSideDefault = (id: string) => LIBRARY_PER_SIDE.has(id);

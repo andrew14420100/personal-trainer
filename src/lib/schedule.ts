@@ -109,3 +109,58 @@ export function monthGrid(year: number, month: number): (Date | null)[] {
 export function dayById(id: DayId): Day {
   return DAY_BY_ID[id];
 }
+
+// ── 5.0: automatic rescheduling of missed workouts ────────────────────────────
+// Rules (pure, deterministic, DST-safe because it only manipulates yyyy-mm-dd dates):
+//  1. a planned workout of a PAST date with no completed session is "missed";
+//  2. it is moved to the first day from max(missed+1, today) that has NO other workout, no
+//     completed session and no personal event that blocks training;
+//  3. it is never moved past the next weekly occurrence of the same workout (origin + 7 days):
+//     if no free day exists before it, it simply stays missed (no accumulation);
+//  4. if the same workout was trained on another day since the origin, it is not missed;
+//  5. dates the user dismissed (undo) are never touched again; existing manual moves are kept;
+//  6. only misses from the last 7 days AND after the feature was enabled are considered.
+export interface AutoMove {
+  from: string; // original planned date (key of `moves`)
+  to: string;
+}
+export interface BlockingEvent {
+  date: string;
+  blocks: boolean;
+}
+
+/** `since`: first date the feature was active (older misses are history, never moved). */
+export function computeAutoMoves(sessions: Session[], moves: Moves, events: BlockingEvent[], dismissed: string[], todayIso: string, since: string, lookbackDays = 7): AutoMove[] {
+  const out: AutoMove[] = [];
+  const m: Moves = { ...moves };
+  const today = parseIso(todayIso);
+  const blocked = new Set(events.filter((e) => e.blocks).map((e) => e.date));
+  const doneDays = new Set(sessions.filter((s) => s.status === 'completed').map((s) => iso(new Date(s.startedAt))));
+  const originOf = (d: string): string => Object.entries(m).find(([f, t]) => t === d && f !== d)?.[0] ?? d;
+  for (let i = lookbackDays; i >= 1; i--) {
+    const d = iso(addDays(today, -i));
+    if (d < since) continue;
+    const info = dateInfo(d, sessions, m, todayIso);
+    if (info.state !== 'skipped' || !info.plan) continue;
+    const origin = originOf(d);
+    if (dismissed.includes(origin)) continue;
+    const limit = iso(addDays(parseIso(origin), 7));
+    // trained anyway on another day since the origin? then it is not missed
+    const trained = sessions.some((s) => s.status === 'completed' && s.dayId === info.plan!.id && iso(new Date(s.startedAt)) >= origin && iso(new Date(s.startedAt)) <= todayIso);
+    if (trained) continue;
+    let t = parseIso(d) < today ? addDays(parseIso(d), 1) : today;
+    if (t < today) t = today;
+    let target: string | null = null;
+    for (; iso(t) < limit; t = addDays(t, 1)) {
+      const k = iso(t);
+      if (blocked.has(k) || doneDays.has(k)) continue;
+      if (planFor(k, m).plan) continue;
+      target = k;
+      break;
+    }
+    if (!target) continue;
+    m[origin] = target;
+    out.push({ from: origin, to: target });
+  }
+  return out;
+}

@@ -18,12 +18,14 @@ export interface SetLog {
   type?: SetType;
   /** Optional RPE of the single set (6–10). */
   rpe?: number | null;
+  /** Optional reps in reserve of the single set (5.0). */
+  rir?: number | null;
   /** Cardio (4.1): distance in km and calories read from the machine. reps = minutes. */
   distanceKm?: number | null;
   kcal?: number | null;
 }
 
-export type SetType = 'warmup' | 'drop' | 'failure';
+export type SetType = 'warmup' | 'drop' | 'failure' | 'partial';
 
 export type Technique = 'buona' | 'discreta' | 'da migliorare';
 

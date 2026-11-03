@@ -54,6 +54,12 @@ export interface Exercise {
   alternatives: { name: string; note: string }[];
   /** Notes about ambiguous variants in the program, shown as an explicit warning. */
   variantNote?: string;
+  // ── 5.0 catalog metadata ──
+  level?: 'principiante' | 'intermedio' | 'avanzato';
+  movement?: string;
+  kind?: string;
+  /** Where the data comes from and how far it was checked. */
+  source?: { name: string; url?: string; license?: string; verified: 'verificato' | 'dati di catalogo'; autoName?: boolean };
 }
 
 export interface Slot {

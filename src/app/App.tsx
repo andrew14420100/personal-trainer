@@ -13,8 +13,12 @@ import { Profile } from '../v4/Profile';
 import { Videos } from '../v4/Videos';
 import { DayEditor, Library, RoutineEditor, RoutineView } from '../v4/Routines';
 import { Tools } from '../v4/Tools';
-import { RestBar, TabBar } from '../v4/Shell';
-import { Empty, Notice, ToastHost } from '../v4/kit';
+import { LivePill, RestBar, TabBar } from '../v4/Shell';
+import { Agenda } from '../v4/Agenda';
+import { More } from '../v4/More';
+import { Tour } from '../v4/Tour';
+import { useAutoReschedule, useResumePrompt, useThemeAttributes } from './effects';
+import { CelebrationHost, Empty, Notice, ToastHost } from '../v4/kit';
 import { UpdatePrompt } from '../components/UpdatePrompt';
 import { PreviewBar } from '../preview/PreviewBar';
 import { navigate } from '../lib/router';
@@ -22,13 +26,17 @@ import type { DayId } from '../data/types';
 import { Compass } from 'lucide-react';
 
 // Old 2.0/3.0 paths kept working (bookmarks, installed app history).
-const ALIASES: Record<string, string> = { scheda: 'allenamenti', impostazioni: 'profilo', riepilogo: 'sessione', video: 'videoteca' };
+const ALIASES: Record<string, string> = { scheda: 'allenamenti', impostazioni: 'profilo', riepilogo: 'sessione', video: 'videoteca', allenati: 'allenamenti' };
 
 export function App() {
   const { path, query } = useRoute();
   const data = useData();
   const root = ALIASES[path[0] ?? ''] ?? path[0] ?? '';
   const inWorkout = root === 'allenamento';
+
+  useThemeAttributes(data.settings);
+  useAutoReschedule(data);
+  const resume = useResumePrompt(data, inWorkout);
 
   useEffect(() => {
     navigator.storage?.persist?.().catch(() => {});
@@ -68,6 +76,12 @@ export function App() {
     case 'calendario':
       screen = <Calendar />;
       break;
+    case 'agenda':
+      screen = <Agenda />;
+      break;
+    case 'altro':
+      screen = <More />;
+      break;
     case 'progressi':
       screen = <Progress />;
       break;
@@ -103,8 +117,12 @@ export function App() {
       )}
       <div key={root + (path[1] ?? '') + (path[2] ?? '')}>{screen}</div>
       {!inWorkout && <TabBar />}
+      {!inWorkout && <LivePill />}
+      {resume}
+      {data.ready && !data.settings.tourDone && !inWorkout && !__PREVIEW__ && <Tour />}
       <RestBar inWorkout={inWorkout} />
       <ToastHost />
+      <CelebrationHost />
       <UpdatePrompt />
     </div>
   );

@@ -1,7 +1,16 @@
 import { useMemo, useState } from 'react';
 import { ArrowRight, Award, CheckCircle2, ChevronRight, Clock, Dumbbell, Flame, History, Moon, Play, PlayCircle, TrendingUp } from 'lucide-react';
 import { sessionMeta } from '../lib/meta';
-import { useData } from '../app/store';
+import { useData, useSettingsUpdater } from '../app/store';
+import { ArrowDown, ArrowUp, Lightbulb, SlidersHorizontal } from 'lucide-react';
+import { ALL_HOME_WIDGETS } from '../lib/settings';
+import { computeTips } from '../lib/tips';
+import { LineChart, ChartCard } from '../components/Charts';
+import { SortableList, Switch } from './kit';
+import { RescheduleNotices, WeekCompare } from './Agenda';
+import { Goals } from './Body';
+import { shortDate, toUnit, unitLabel } from '../lib/format';
+import { weeklySummaries } from '../lib/stats';
 import { Camera, FolderOpen, Medal, Scale, Zap } from 'lucide-react';
 import { prTimeline, weekStreak, PR_LABEL } from '../lib/records';
 import { exName } from '../data/catalog';
@@ -32,6 +41,7 @@ export function Home() {
   const doneToday = today.sessions[0];
   const [pick, setPick] = useState(false);
   const [sel, setSel] = useState(iso(now));
+  const [edit, setEdit] = useState(false);
 
   const begin = async (dayId: DayId) => {
     if (!active) await startSession(dayId, settings, calibration, sessions);
@@ -86,7 +96,7 @@ export function Home() {
         <div className="row mt16">
           {active ? (
             <button className="btn primary lg grow" onClick={() => navigate('/allenamento')}>
-              <PlayCircle size={20} /> Riprendi allenamento
+              <PlayCircle size={20} /> Riprendi la seduta
             </button>
           ) : doneToday ? (
             <button className="btn ok lg grow" onClick={() => navigate(`/sessione/${doneToday.id}`)}>
@@ -94,7 +104,7 @@ export function Home() {
             </button>
           ) : today.plan ? (
             <button className="btn primary lg grow" onClick={() => begin(shown.id)}>
-              <Play size={18} fill="currentColor" /> Inizia allenamento
+              <Play size={18} fill="currentColor" /> Inizia oggi
             </button>
           ) : (
             <button className="btn lg grow" onClick={() => setPick(true)}>
@@ -108,44 +118,19 @@ export function Home() {
       </article>
       {calibration && <p className="t-xs c3 mt8">Settimana di calibrazione: volume ridotto nelle prime 4 sedute (modificabile nel Profilo).</p>}
 
-      {/* ── Week ──────────────────────────────────────────── */}
-      <Section title="Settimana" action={<button className="link" onClick={() => navigate('/calendario')}>Calendario</button>}>
-        <div className="card">
-          <WeekStrip selected={sel} onSelect={setSel} />
-          <SelectedDay date={sel} />
-          <div className="mt12">
-            <Legend />
-          </div>
-        </div>
-      </Section>
-
-      <WeekProgress />
-      <Quick />
-      <Muscles7 />
-      <RecentPRs />
-      <Overview />
-
-      {/* ── Quick access to the plan ──────────────────────── */}
-      <Section title="La tua scheda" action={<button className="link" onClick={() => navigate('/allenamenti')}>Apri</button>}>
-        <div className="list">
-          {DAYS.map((d) => (
-            <button key={d.id} className="list-row" style={{ ['--day' as string]: d.accent }} onClick={() => navigate(`/giorno/${d.id}`)}>
-              <span className="dot" />
-              <span className="grow">
-                <span className="t-h3" style={{ display: 'block' }}>
-                  {d.name}
-                </span>
-                <span className="t-xs c3">
-                  {d.weekdayLabel} · {d.code} · {effectiveDay(d.id, settings, calibration).length} esercizi
-                </span>
-              </span>
-              <ChevronRight size={18} className="c3" />
-            </button>
-          ))}
-        </div>
-      </Section>
-
-      <Milestones />
+      <div className="row spread mt24" style={{ marginBottom: 4 }}>
+        <h2 className="t-h2">La tua dashboard</h2>
+        <button className="link" onClick={() => setEdit(true)}>
+          <SlidersHorizontal size={14} /> Personalizza
+        </button>
+      </div>
+      {settings.homeWidgets
+        .filter((w) => w.visible)
+        .map((w) => {
+          const W = WIDGETS[w.id];
+          return W ? <W.C key={w.id} sel={sel} setSel={setSel} /> : null;
+        })}
+      <WidgetEditor open={edit} onClose={() => setEdit(false)} />
 
       <Sheet open={pick} onClose={() => setPick(false)} label="Scegli l’allenamento">
         <h3 className="t-h2" style={{ marginBottom: 12 }}>
@@ -382,5 +367,236 @@ function Milestones() {
         <TrendingUp size={12} /> Calcolati dalle sedute registrate.
       </p>
     </Section>
+  );
+}
+
+// ── 5.0 widgets ────────────────────────────────────────────────────────────────
+type WProps = { sel: string; setSel: (d: string) => void };
+
+function WeekWidget({ sel, setSel }: WProps) {
+  return (
+    <Section title="Settimana" action={<button className="link" onClick={() => navigate('/agenda')}>Agenda</button>}>
+      <div className="card">
+        <WeekStrip selected={sel} onSelect={setSel} />
+        <SelectedDay date={sel} />
+        <div className="mt12">
+          <Legend />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function AgendaWidget() {
+  const { settings, sessions } = useData();
+  const today = iso(new Date());
+  const info = dateInfo(today, sessions, settings.moves, today);
+  const events = settings.events.filter((e) => e.date === today).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
+  return (
+    <Section title="Agenda di oggi" action={<button className="link" onClick={() => navigate('/agenda')}>Apri</button>}>
+      <RescheduleNotices />
+      <div className="list mt8">
+        <div className="list-row">
+          {info.state === 'done' ? <CheckCircle2 size={20} color="var(--ok)" /> : info.plan ? <Dumbbell size={20} color="var(--accent)" /> : <Moon size={20} className="c3" />}
+          <span className="grow t-sm" style={{ fontWeight: 650 }}>
+            {info.sessions[0] ? sessionMeta(info.sessions[0], settings).name : info.plan ? info.plan.name : 'Giorno di riposo'}
+          </span>
+          <span className="t-xs c3">{stateLabel(info)}</span>
+        </div>
+        {events.map((e) => (
+          <div key={e.id} className="list-row">
+            <Clock size={18} className="c3" />
+            <span className="grow t-sm">{e.title}</span>
+            <span className="t-xs c3">{e.time ?? ''}</span>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function WeekStatsWidget() {
+  const { sessions } = useData();
+  const wk = weekStart(Date.now());
+  const done = completed(sessions).filter((s) => weekStart(s.startedAt) === wk);
+  return (
+    <Section title="Progressi della settimana">
+      <div className="stats">
+        <div className="stat">
+          <div className="t-label">Sedute</div>
+          <div className="v">{done.length}</div>
+        </div>
+        <div className="stat">
+          <div className="t-label">Serie</div>
+          <div className="v">{done.reduce((a, s) => a + sessionSets(s), 0)}</div>
+        </div>
+        <div className="stat">
+          <div className="t-label">Volume</div>
+          <div className="v c-data">{volume(done.reduce((a, s) => a + sessionVolume(s), 0))}</div>
+        </div>
+        <div className="stat">
+          <div className="t-label">Tempo attivo</div>
+          <div className="v">{done.reduce((a, s) => a + sessionDurationMin(s), 0)} min</div>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+function LastWidget() {
+  const { sessions, settings } = useData();
+  const done = completed(sessions);
+  const last = done[done.length - 1];
+  if (!last) return <Overview />;
+  const same = done.filter((s) => s.dayId === last.dayId).slice(-8);
+  return (
+    <Section title="Ultimo allenamento" action={<button className="link" onClick={() => navigate(`/sessione/${last.id}`)}>Riepilogo</button>}>
+      <div className="card">
+        <div className="t-h3">{sessionMeta(last, settings).name}</div>
+        <div className="t-sm c2" style={{ marginTop: 4 }}>
+          {relativeDays(last.startedAt)} · {sessionDurationMin(last)} min · {sessionSets(last)} serie · {volume(sessionVolume(last))}
+        </div>
+        {same.length >= 2 ? (
+          <div className="mt12">
+            <LineChart data={same.map((s) => ({ key: s.id, label: shortDate(s.startedAt), value: Math.round(toUnit(sessionVolume(s))) }))} unit={unitLabel()} label="Volume delle ultime sedute dello stesso allenamento" />
+            <p className="t-xs c3" style={{ margin: 0 }}>Volume delle ultime {same.length} sedute di questo allenamento.</p>
+          </div>
+        ) : (
+          <p className="t-xs c3 mt8" style={{ marginBottom: 0 }}>Il grafico dei miglioramenti compare dalla seconda seduta dello stesso allenamento.</p>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function ChartWidget({ kind }: { kind: 'volume' | 'time' }) {
+  const { sessions } = useData();
+  const weeks = weeklySummaries(sessions).slice(-8);
+  const mins = (w: string) => completed(sessions).filter((s) => weekStart(s.startedAt) === w).reduce((a, s) => a + sessionDurationMin(s), 0);
+  if (!weeks.length) return null;
+  return (
+    <Section title={kind === 'volume' ? 'Volume settimanale' : 'Tempo di allenamento'}>
+      <ChartCard
+        title={kind === 'volume' ? `Volume (${unitLabel()} × rip.)` : 'Minuti attivi a settimana'}
+        kind="bar"
+        unit={kind === 'volume' ? unitLabel() : 'min'}
+        color={kind === 'volume' ? 'var(--accent)' : 'var(--ok)'}
+        highlightLast
+        data={weeks.map((w) => ({ key: w.week, label: shortDate(new Date(w.week + 'T12:00:00')), value: kind === 'volume' ? Math.round(toUnit(w.volume)) : mins(w.week) }))}
+      />
+    </Section>
+  );
+}
+
+function BodyWeightWidget() {
+  const { measurements } = useData();
+  const w = [...measurements].filter((m) => m.bodyWeight != null).sort((a, b) => a.date.localeCompare(b.date));
+  return (
+    <Section title="Peso corporeo" action={<button className="link" onClick={() => navigate('/progressi?tab=corpo')}>{w.length ? 'Dettagli' : 'Registra'}</button>}>
+      <div className="card">
+        {w.length ? (
+          <>
+            <div className="row spread">
+              <span className="t-h1">{kg(w[w.length - 1].bodyWeight!)}</span>
+              <span className="t-xs c3">{shortDate(new Date(w[w.length - 1].date + 'T12:00:00'))}</span>
+            </div>
+            {w.length >= 2 && <LineChart data={w.slice(-12).map((m) => ({ key: m.id, label: shortDate(new Date(m.date + 'T12:00:00')), value: toUnit(m.bodyWeight!) }))} unit={unitLabel()} label="Peso corporeo" />}
+          </>
+        ) : (
+          <p className="t-sm c3" style={{ margin: 0 }}>Nessun peso registrato.</p>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function TipsWidget() {
+  const { sessions, measurements, settings } = useData();
+  const tips = useMemo(() => computeTips(sessions, measurements, settings).slice(0, 3), [sessions, measurements, settings]);
+  if (!tips.length) return null;
+  return (
+    <Section title="Consigli" action={<span className="t-xs c3">regole locali</span>}>
+      <div className="col" style={{ gap: 8 }}>
+        {tips.map((t) => (
+          <div key={t.id} className="card">
+            <div className="row">
+              <Lightbulb size={18} color="var(--accent)" />
+              <span className="grow t-h3">{t.title}</span>
+            </div>
+            <p className="t-sm c2" style={{ margin: '6px 0 0' }}>
+              {t.body}
+            </p>
+            {t.action && (
+              <button className="btn sm mt8" onClick={() => navigate(t.action!.to)}>
+                {t.action.label}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+const WIDGETS: Record<string, { label: string; C: (p: WProps) => JSX.Element | null }> = {
+  agenda: { label: 'Agenda di oggi', C: AgendaWidget },
+  week: { label: 'Calendario settimanale', C: WeekWidget },
+  goal: { label: 'Obiettivo allenamenti', C: WeekProgress },
+  weekProgress: { label: 'Progressi della settimana', C: WeekStatsWidget },
+  last: { label: 'Ultima sessione con grafico', C: LastWidget },
+  compare: { label: 'Confronto con la settimana precedente', C: WeekCompare },
+  records: { label: 'Record recenti', C: RecentPRs },
+  muscles: { label: 'Muscoli allenati (7 giorni)', C: Muscles7 },
+  volume: { label: 'Volume', C: () => <ChartWidget kind="volume" /> },
+  time: { label: 'Tempo di allenamento', C: () => <ChartWidget kind="time" /> },
+  bodyweight: { label: 'Peso corporeo', C: BodyWeightWidget },
+  goals: { label: 'Obiettivi personali', C: Goals },
+  badges: { label: 'Traguardi', C: Milestones },
+  tips: { label: 'Consigli', C: TipsWidget },
+  quick: { label: 'Accesso rapido', C: Quick },
+};
+
+function WidgetEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { settings } = useData();
+  const update = useSettingsUpdater();
+  const list = settings.homeWidgets;
+  const save = (homeWidgets: typeof list) => update((s) => ({ ...s, homeWidgets }));
+  return (
+    <Sheet open={open} onClose={onClose} label="Personalizza la dashboard">
+      <h3 className="t-h2">Personalizza la dashboard</h3>
+      <p className="t-xs c3" style={{ margin: '4px 0 12px' }}>
+        Trascina per riordinare, usa l’interruttore per mostrare o nascondere.
+      </p>
+      <div className="list">
+        <SortableList
+          label="Widget della Home"
+          items={list}
+          onChange={save}
+          render={(w, handle, move) => (
+            <div className="list-row" style={{ minHeight: 52 }}>
+              {handle}
+              <span className="grow t-sm" style={{ fontWeight: 650, color: w.visible ? undefined : 'var(--t3)' }}>
+                {WIDGETS[w.id]?.label ?? w.id}
+              </span>
+              <span className="widget-tools">
+                <button className="icon-btn clear" style={{ width: 34, height: 34 }} aria-label={`Sposta su ${WIDGETS[w.id]?.label}`} onClick={() => move(-1)}>
+                  <ArrowUp size={15} />
+                </button>
+                <button className="icon-btn clear" style={{ width: 34, height: 34 }} aria-label={`Sposta giù ${WIDGETS[w.id]?.label}`} onClick={() => move(1)}>
+                  <ArrowDown size={15} />
+                </button>
+              </span>
+              <Switch checked={w.visible} onChange={(v) => save(list.map((x) => (x.id === w.id ? { ...x, visible: v } : x)))} label={`Mostra ${WIDGETS[w.id]?.label}`} />
+            </div>
+          )}
+        />
+      </div>
+      <button className="btn ghost block mt12" onClick={() => save(ALL_HOME_WIDGETS.map((id) => ({ id, visible: true })))}>
+        Ripristina predefiniti
+      </button>
+      <button className="btn primary block mt8" onClick={onClose}>
+        Fatto
+      </button>
+    </Sheet>
   );
 }

@@ -1,4 +1,8 @@
-# FORMA LAB 4.1
+# FORMA LAB 5.0 (in sviluppo sul ramo `claude/forma-lab-5`)
+
+Fasi 1–3 realizzate: nuovo design (tema chiaro/scuro, blu elettrico, nuovo logo), navigazione Oggi · Agenda · Allenati · Progressi · Altro, Home a widget, Agenda con riprogrammazione automatica, seduta a una mano (conferma automatica, annulla, ±), 914 esercizi. Stato di ogni decisione: [docs/REQUISITI_128.md](docs/REQUISITI_128.md) · audit e scelte: [docs/AUDIT_5.0.md](docs/AUDIT_5.0.md).
+
+## Versione precedente: FORMA LAB 4.1
 
 Novità della 4.1 (allenamento in stile app professionali, schede personalizzabili, statistiche, corpo, correzione dei video su iPhone): [docs/NOVITA_4.1.md](docs/NOVITA_4.1.md).
 
@@ -41,8 +45,8 @@ Apre l’app in sviluppo su `http://localhost:5173` (senza autenticazione: il mi
 | Comando | Cosa fa |
 |---|---|
 | `npm run build` | Type-check + build di produzione in `dist/` (PWA con service worker) |
-| `npm test` | 70 test unitari (scheda, calendario, migrazione 4.0, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
-| `npm run test:e2e` | 179 controlli end-to-end Playwright sulla build (iPhone 14 Pro, iPhone SE, desktop; migrazione, calendario, registro, offline, backup) |
+| `npm test` | 77 test unitari (scheda, calendario, migrazione 4.0, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
+| `npm run test:e2e` | 211 controlli end-to-end Playwright sulla build (iPhone 14 Pro, iPhone SE, desktop; migrazione, calendario, registro, offline, backup) |
 | `npm run verify:videos` | Riverifica i tutorial esterni e rigenera `docs/VERIFICA_VIDEO.md` |
 | `npx vite-node scripts/verify-real-videos.ts` | Riverifica i video reali e rigenera `docs/VIDEO_REALI.md` |
 | `npm run totp:new` | Genera passphrase, segreto TOTP e chiave di sessione per l’accesso privato |

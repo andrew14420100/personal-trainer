@@ -47,7 +47,7 @@ import { navigate } from '../lib/router';
 import { uid } from '../lib/db';
 import type { RoutineItem } from '../lib/settings';
 import type { DayId } from '../data/types';
-import { Confirm, Empty, Notice, Seg, Sheet, Switch, toast } from './kit';
+import { celebrate, Confirm, Empty, Notice, Seg, Sheet, Switch, toast } from './kit';
 import { Player } from './Player';
 import { ExerciseThumb } from './Plan';
 import { ExercisePicker, newItem } from './Routines';
@@ -91,8 +91,8 @@ function useElapsed(s: Session) {
   return activeElapsed(s, s.pausedAt ? s.pausedAt : now);
 }
 
-const TYPE_SHORT: Record<SetType, string> = { warmup: 'R', drop: 'D', failure: 'C' };
-const TYPE_LABEL: Record<SetType | 'normal', string> = { normal: 'Normale', warmup: 'Riscaldamento', drop: 'Drop set', failure: 'A cedimento' };
+const TYPE_SHORT: Record<SetType, string> = { warmup: 'R', drop: 'D', failure: 'C', partial: 'P' };
+const TYPE_LABEL: Record<SetType | 'normal', string> = { normal: 'Normale', warmup: 'Riscaldamento', drop: 'Drop set', failure: 'A cedimento', partial: 'Parziale (ROM ridotto)' };
 
 /** Logs of the same superset group, in order, with their index in the session. */
 const groupMembers = (s: Session, g?: string) => (g ? s.exercises.map((l, i) => ({ l, i })).filter((x) => x.l.group === g) : []);
@@ -350,11 +350,13 @@ function Current({ s, idx, paused, go, onFinish, onAddAfter }: { s: Session; idx
   const workIdx = (i: number) => log.sets.slice(0, i).filter((x) => x.type !== 'warmup').length;
   const firstWork = log.sets.find((x) => x.type !== 'warmup' && x.weight)?.weight ?? prevWork[0]?.weight ?? hint.suggestedWeight ?? null;
 
-  const onSetDone = async (setIdx: number, patch: Partial<SetLog>) => {
+  const onSetDone = async (setIdx: number, patch: Partial<SetLog>, auto = false) => {
     unlockAudio();
     let outcome: 'done' | 'undone' | 'missing' = 'missing';
     let after: Session | null = null;
+    let before: Session | null = null;
     await mutate(s.id, (x) => {
+      before = structuredClone(x);
       const l = x.exercises[idx];
       const cur = { ...l.sets[setIdx], ...patch };
       if (cur.done) {
@@ -375,8 +377,13 @@ function Current({ s, idx, paused, go, onFinish, onAddAfter }: { s: Session; idx
     const l = x.exercises[idx];
     const done = l.sets[setIdx];
     const prs = setPRs(done, prior, hasHistory);
-    if (prs.length) toast(`🏅 Record: ${prs.map((k) => PR_LABEL[k]).join(', ')}`);
+    const snap = before as Session | null;
+    const undo = { label: 'Annulla', run: () => snap && void mutate(s.id, () => snap).then(() => timer.stop()) };
+    if (prs.length) celebrate(prs.map((k) => PR_LABEL[k]).join(' · '));
+    toast(`${auto ? 'Confermata in automatico: ' : ''}serie ${setIdx + 1} · ${cardio ? `${done.reps} min` : `${done.weight != null ? formatKg(toUnit(done.weight)) + ' ' + unitLabel() + ' × ' : ''}${done.reps}`}`, undo);
     const nextSet = l.sets.find((z, i) => i > setIdx && !z.done);
+    // all sets of this exercise done → move on to the next exercise automatically
+    if (!nextSet && !log.group && !isLast) window.setTimeout(() => void go(idx + 1), 700);
     // superset: jump to the next member of the group that still has sets to do
     if (log.group && settings.smartSuperset) {
       const g = groupMembers(x, log.group);
@@ -522,11 +529,14 @@ function Current({ s, idx, paused, go, onFinish, onAddAfter }: { s: Session; idx
               prs={setPRs(set, prior, hasHistory)}
               onType={() => setSetSheet(i)}
               onChange={(p) => mutate(s.id, (x) => updateSet(x, idx, i, p))}
-              onToggle={(p) => onSetDone(i, p)}
+              onToggle={(p, auto) => onSetDone(i, p, auto)}
+              autoConfirm={settings.autoConfirm}
+              bodyweight={ex.load === 'bodyweight'}
             />
           ),
         )}
       </div>
+      {!cardio && <QuickEntry s={s} idx={idx} log={log} step={ex.increment || 2.5} prevWork={prevWork} suggested={hint.suggestedWeight ?? null} onConfirm={(i, p) => onSetDone(i, p)} />}
       <div className="row wrap mt8" style={{ gap: 6 }}>
         <button className="btn sm ghost" aria-label="Aggiungi una serie" onClick={() => mutate(s.id, (x) => addSet(x, idx))}>
           <Plus size={15} /> Serie
@@ -610,7 +620,7 @@ function Current({ s, idx, paused, go, onFinish, onAddAfter }: { s: Session; idx
           <div className="col">
             <h3 className="t-h2">Serie {setSheet + 1}</h3>
             <div className="list">
-              {(['normal', 'warmup', 'drop', 'failure'] as const).map((t) => {
+              {(['normal', 'warmup', 'drop', 'failure', 'partial'] as const).map((t) => {
                 const cur = (log.sets[setSheet].type ?? 'normal') === t;
                 return (
                   <button
@@ -633,6 +643,22 @@ function Current({ s, idx, paused, go, onFinish, onAddAfter }: { s: Session; idx
             <p className="t-xs c3" style={{ margin: 0 }}>
               Il riscaldamento non conta nelle statistiche e nei record. Prima di un drop set il recupero non parte.
             </p>
+            <div>
+              <div className="t-label">RIR di questa serie (ripetizioni di margine)</div>
+              <div className="row wrap mt8" style={{ gap: 6 }}>
+                {[0, 1, 2, 3, 4].map((r) => (
+                  <button
+                    key={r}
+                    className={`btn sm${log.sets[setSheet].rir === r ? ' primary' : ''}`}
+                    style={{ minWidth: 48 }}
+                    aria-pressed={log.sets[setSheet].rir === r}
+                    onClick={() => mutate(s.id, (x) => updateSet(x, idx, setSheet, { rir: x.exercises[idx].sets[setSheet].rir === r ? null : r }))}
+                  >
+                    {r === 4 ? '4+' : r}
+                  </button>
+                ))}
+              </div>
+            </div>
             {settings.rpePerSet && (
               <div>
                 <div className="t-label">RPE di questa serie</div>
@@ -793,6 +819,8 @@ function SetRow({
   onType,
   onChange,
   onToggle,
+  autoConfirm,
+  bodyweight,
 }: {
   index: number;
   set: SetLog;
@@ -802,11 +830,15 @@ function SetRow({
   prs: PRKind[];
   onType: () => void;
   onChange: (p: Partial<SetLog>) => void;
-  onToggle: (p: Partial<SetLog>) => void;
+  onToggle: (p: Partial<SetLog>, auto?: boolean) => void;
+  autoConfirm?: boolean;
+  bodyweight?: boolean;
 }) {
   const fmtW = (v: number | null | undefined) => (v == null ? '' : String(toUnit(v)).replace('.', ','));
   const W = useField(set.weight, fmtW);
   const R = useField(set.reps, (v) => (v == null ? '' : String(v)));
+  // time of the last automatic confirmation: a tap on ✓ right after it must not undo it
+  const autoAt = useRef(0);
   const takeDirty = (): Partial<SetLog> => {
     const patch: Partial<SetLog> = {};
     if (W.dirty.current) {
@@ -879,13 +911,30 @@ function SetRow({
           R.dirty.current = true;
           R.setT(e.target.value);
         }}
-        onBlur={() => blur(R, true, () => R.setT(set.reps == null ? '' : String(set.reps)))}
+        onBlur={() => {
+          // auto-confirm only when LEAVING the reps field with valid data (never while typing)
+          if (autoConfirm && !set.done && R.dirty.current) {
+            const reps = parse(R.t, true);
+            const w = W.t ? parse(W.t) : set.weight ?? prevSet?.weight ?? (bodyweight ? 0 : null);
+            if (reps && reps > 0 && w !== undefined && w !== null) {
+              R.focus.current = false;
+              const p = fillFromPrev(takeDirty());
+              if (p.weight == null && set.weight == null && bodyweight) p.weight = 0;
+              autoAt.current = Date.now();
+              return onToggle(p, true);
+            }
+          }
+          blur(R, true, () => R.setT(set.reps == null ? '' : String(set.reps)));
+        }}
       />
       <button
         className={`check${set.done ? ' on' : ''}`}
         aria-pressed={set.done}
         aria-label={set.done ? `Serie ${index + 1} completata: tocca per modificare` : `Segna serie ${index + 1} come completata`}
-        onClick={() => onToggle(set.done ? takeDirty() : fillFromPrev(takeDirty()))}
+        onClick={() => {
+          if (Date.now() - autoAt.current < 1200) return; // already confirmed by leaving the reps field
+          onToggle(set.done ? takeDirty() : fillFromPrev(takeDirty()));
+        }}
       >
         <Check size={22} strokeWidth={3} />
       </button>
@@ -1050,3 +1099,45 @@ function FinishSheet({ open, onClose, session }: { open: boolean; onClose: () =>
   );
 }
 
+
+/** Big one-hand controls for the next set to do: ± load, ± reps, confirm. */
+function QuickEntry({ s, idx, log, step, prevWork, suggested, onConfirm }: { s: Session; idx: number; log: ExerciseLog; step: number; prevWork: SetLog[]; suggested: number | null; onConfirm: (i: number, p: Partial<SetLog>) => void }) {
+  const i = log.sets.findIndex((x) => !x.done);
+  if (i < 0) return null;
+  const set = log.sets[i];
+  const workPos = log.sets.slice(0, i).filter((x) => x.type !== 'warmup').length;
+  const ref = set.type === 'warmup' ? undefined : prevWork[workPos];
+  const w = set.weight ?? ref?.weight ?? suggested ?? 0;
+  const r = set.reps ?? ref?.reps ?? log.repsMin;
+  const put = (p: Partial<SetLog>) => mutate(s.id, (x) => updateSet(x, idx, i, p));
+  const U = unitLabel();
+  return (
+    <div className="card mt8" aria-label={`Inserimento rapido serie ${i + 1}`}>
+      <div className="row spread">
+        <span className="t-label">Serie {i + 1}{set.type ? ` · ${TYPE_LABEL[set.type]}` : ''}</span>
+        {ref && <span className="t-xs c3">la volta scorsa {formatKg(toUnit(ref.weight ?? 0))} {U} × {ref.reps}</span>}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+        <div>
+          <div className="t-xs c3" style={{ textAlign: 'center' }}>{U}</div>
+          <div className="stepper mt8">
+            <button aria-label={`Meno ${step} ${U}`} onClick={() => put({ weight: Math.max(0, Math.round((w - step) * 100) / 100) })}>−</button>
+            <span className="t-h2" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{formatKg(toUnit(w))}</span>
+            <button aria-label={`Più ${step} ${U}`} onClick={() => put({ weight: Math.round((w + step) * 100) / 100 })}>+</button>
+          </div>
+        </div>
+        <div>
+          <div className="t-xs c3" style={{ textAlign: 'center' }}>{log.unit === 'sec' ? 'secondi' : 'ripetizioni'}</div>
+          <div className="stepper mt8">
+            <button aria-label="Una ripetizione in meno" onClick={() => put({ reps: Math.max(0, r - 1) })}>−</button>
+            <span className="t-h2" style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r}</span>
+            <button aria-label="Una ripetizione in più" onClick={() => put({ reps: r + 1 })}>+</button>
+          </div>
+        </div>
+      </div>
+      <button className="btn ok lg block mt12" onClick={() => onConfirm(i, { weight: w, reps: r })}>
+        <Check size={20} strokeWidth={3} /> Conferma serie {i + 1}
+      </button>
+    </div>
+  );
+}

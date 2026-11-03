@@ -13,10 +13,10 @@ import { Legend, StateDots, WeekStrip, stateLabel, weekLabel } from './Week';
 
 const WD = ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
 
-export function Calendar() {
+export function Calendar({ embedded = false, initialView = 'settimana' }: { embedded?: boolean; initialView?: 'settimana' | 'mese' } = {}) {
   const { sessions, settings } = useData();
   const today = iso(new Date());
-  const [view, setView] = useState<'settimana' | 'mese'>('settimana');
+  const [view, setView] = useState<'settimana' | 'mese'>(initialView);
   const [sel, setSel] = useState(today);
   const [ym, setYm] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
   const cells = useMemo(() => monthGrid(ym.y, ym.m), [ym]);
@@ -33,10 +33,11 @@ export function Calendar() {
   }, [infos, today]);
   const shiftMonth = (n: number) => setYm(({ y, m }) => ({ y: m + n < 0 ? y - 1 : m + n > 11 ? y + 1 : y, m: (m + n + 12) % 12 }));
 
+  const Wrap = embedded ? 'div' : 'main';
   return (
-    <main className="page">
-      <AppBar title="Calendario" />
-      <Seg label="Vista" value={view} onChange={setView} options={[{ value: 'settimana', label: 'Settimana' }, { value: 'mese', label: 'Mese' }]} />
+    <Wrap className={embedded ? undefined : 'page'}>
+      {!embedded && <AppBar title="Calendario" />}
+      {!embedded && <Seg label="Vista" value={view} onChange={setView} options={[{ value: 'settimana', label: 'Settimana' }, { value: 'mese', label: 'Mese' }]} />}
 
       {view === 'settimana' ? (
         <div className="card mt12">
@@ -97,7 +98,7 @@ export function Calendar() {
 
       <DayPanel date={sel} />
       {view === 'settimana' && <WeekList date={sel} onSelect={setSel} />}
-    </main>
+    </Wrap>
   );
 }
 
@@ -139,7 +140,7 @@ function originOf(date: string, moves: Record<string, string>, info: DateInfo): 
   return info.plan ? date : null;
 }
 
-function DayPanel({ date }: { date: string }) {
+export function DayPanel({ date }: { date: string }) {
   const { sessions, settings, calibration, active } = useData();
   const update = useSettingsUpdater();
   const today = iso(new Date());

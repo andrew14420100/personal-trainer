@@ -79,10 +79,47 @@ export interface Settings {
   rpePerSet: boolean;
   /** Superset: jump to the next exercise of the group after each set. */
   smartSuperset: boolean;
+  // ── 5.0 ──
+  theme: 'auto' | 'light' | 'dark';
+  textSize: 's' | 'm' | 'l';
+  gymMode: boolean;
+  /** Bottom bar layout (ids of the 5 tabs). */
+  tabs: string[];
+  /** Home widgets in order; hidden ones are kept with visible=false. */
+  homeWidgets: { id: string; visible: boolean }[];
+  /** Confirm a set automatically when weight + reps are valid (after leaving the reps field). */
+  autoConfirm: boolean;
+  /** Automatic rescheduling of missed workouts to the next free day. */
+  autoReschedule: boolean;
+  /** Personal agenda events (yyyy-mm-dd). blocks=true: no workout can be moved onto that day. */
+  events: AgendaEvent[];
+  /** Log of automatic reschedules (shown with an "Annulla" action). */
+  autoMoves: { from: string; to: string; at: number }[];
+  /** Missed dates the user chose NOT to reschedule (never touched again). */
+  dismissedMisses: string[];
+  recentExercises: string[];
+  archivedExercises: string[];
+  tourDone: boolean;
+  /** First day automatic rescheduling was active ('' = not yet). */
+  rescheduleSince: string;
+  /** Last time a backup file was exported (ms). */
+  lastBackupAt: number;
   reminders: { time: string; minutesBefore: number };
   /** Plates available in the gym (kg, per side) and bar weight, for the plate calculator. */
   plates: { bar: number; available: number[] };
 }
+
+export interface AgendaEvent {
+  id: string;
+  date: string;
+  time?: string;
+  title: string;
+  blocks: boolean;
+}
+
+export const ALL_HOME_WIDGETS = ['agenda', 'week', 'goal', 'weekProgress', 'last', 'compare', 'records', 'muscles', 'volume', 'time', 'bodyweight', 'goals', 'badges', 'tips', 'quick'] as const;
+export const DEFAULT_TABS = ['', 'agenda', 'allenati', 'progressi', 'altro'];
+
 
 export const DEFAULT_SETTINGS: Settings = {
   name: '',
@@ -109,6 +146,21 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   rpePerSet: true,
   smartSuperset: true,
+  theme: 'auto',
+  textSize: 'm',
+  gymMode: false,
+  tabs: DEFAULT_TABS,
+  homeWidgets: ALL_HOME_WIDGETS.map((id) => ({ id, visible: true })),
+  autoConfirm: true,
+  autoReschedule: true,
+  events: [],
+  autoMoves: [],
+  dismissedMisses: [],
+  recentExercises: [],
+  archivedExercises: [],
+  tourDone: false,
+  rescheduleSince: '',
+  lastBackupAt: 0,
   reminders: { time: '18:30', minutesBefore: 30 },
   plates: { bar: 20, available: [25, 20, 15, 10, 5, 2.5, 1.25] },
 };
@@ -123,6 +175,8 @@ export async function loadSettings(): Promise<Settings> {
     warmup: stored?.warmup?.length ? stored.warmup : DEFAULT_SETTINGS.warmup,
     reminders: { ...DEFAULT_SETTINGS.reminders, ...(stored?.reminders ?? {}) },
     plates: { ...DEFAULT_SETTINGS.plates, ...(stored?.plates ?? {}) },
+    // keep the user's order, add widgets introduced by newer versions at the end
+    homeWidgets: mergeWidgets(stored?.homeWidgets),
   };
 }
 
@@ -134,4 +188,10 @@ export async function updateSettings(patch: (s: Settings) => Settings): Promise<
   const next = patch(await loadSettings());
   await saveSettings(next);
   return next;
+}
+
+function mergeWidgets(stored?: { id: string; visible: boolean }[]) {
+  const list = (stored ?? []).filter((w) => (ALL_HOME_WIDGETS as readonly string[]).includes(w.id));
+  for (const id of ALL_HOME_WIDGETS) if (!list.some((w) => w.id === id)) list.push({ id, visible: true });
+  return list;
 }
