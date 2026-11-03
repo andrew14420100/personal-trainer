@@ -1,6 +1,6 @@
 // 4.1: exercise picker, routine editor (custom routines and edited plan days), library, routine view.
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Check, Copy, ChevronRight, Dumbbell, Link2, Play, PlayCircle, Plus, Search, Trash2, Unlink, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Copy, Download, ChevronRight, Dumbbell, Link2, Play, PlayCircle, Plus, Search, Trash2, Unlink, Zap } from 'lucide-react';
 import { useData, useSettingsUpdater } from '../app/store';
 import { EXERCISE_BY_ID } from '../data/exercises';
 import { EXERCISE_MUSCLES, MUSCLE_LABEL, MUSCLE_REGION, aggregate, type MuscleId } from '../data/muscles';
@@ -16,6 +16,8 @@ import type { DayId } from '../data/types';
 import { Anatomy } from '../components/Anatomy';
 import { Confirm, Empty, NavBar, Section, Sheet, toast } from './kit';
 import { ExerciseThumb } from './Plan';
+import { downloadExchange } from './Programs';
+import { exportRoutine } from '../lib/exchange';
 
 const GROUPS = ['Tutti', 'Cardio', 'Petto', 'Schiena', 'Spalle', 'Bicipiti', 'Tricipiti', 'Gambe', 'Glutei', 'Femorali', 'Polpacci', 'Addome'];
 const matchGroup = (id: string, g: string) => {
@@ -526,6 +528,9 @@ export function RoutineView({ id }: { id: string }) {
         }}
       >
         <Copy size={16} /> Duplica
+      </button>
+      <button className="btn block mt8" onClick={() => downloadExchange(exportRoutine(r))}>
+        <Download size={16} /> Esporta scheda per ChatGPT
       </button>
       <Section title="Muscoli">
         <div className="card">

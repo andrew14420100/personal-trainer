@@ -1,0 +1,72 @@
+{
+  "$schema": "https://forma-lab.pages.dev/formats/forma-lab-workout-exchange-v1.schema.json",
+  "format": "forma-lab-workout-exchange",
+  "version": 1,
+  "generator": "ChatGPT",
+  "program": {
+    "name": "Ipertrofia 8 settimane – Upper/Lower",
+    "description": "Quattro giornate a settimana con progressione a doppia soglia e una settimana di scarico.",
+    "author": "ChatGPT",
+    "goal": "massa",
+    "level": "intermedio",
+    "durationWeeks": 8,
+    "daysPerWeek": 4,
+    "recommendedWeekdays": ["lunedi", "martedi", "giovedi", "venerdi"],
+    "progression": "Quando completi tutte le serie al massimo delle ripetizioni con RIR ≥ 1, aumenta il carico del 2,5–5%.",
+    "phases": [
+      { "name": "Accumulo", "fromWeek": 1, "toWeek": 3, "rir": 2 },
+      { "name": "Intensificazione", "fromWeek": 4, "toWeek": 6, "setsDelta": 1, "rir": 1 },
+      { "name": "Scarico", "fromWeek": 7, "toWeek": 7, "deload": true, "notes": "Carichi -10%, lontano dal cedimento." },
+      { "name": "Picco", "fromWeek": 8, "toWeek": 8, "rpe": 9 }
+    ],
+    "days": [
+      {
+        "id": "upper-1",
+        "name": "Upper 1 – Petto e schiena",
+        "weekday": "lunedi",
+        "muscleGroups": ["Petto", "Schiena", "Braccia"],
+        "exercises": [
+          { "exerciseId": "chest-press", "name": "Chest Press", "sets": 3, "reps": { "min": 8, "max": 12 }, "restSec": 120, "warmupSets": 2, "rir": 2 },
+          { "name": "Lat Machine presa prona", "sets": 3, "reps": { "min": 8, "max": 12 }, "restSec": 120 },
+          { "name": "Curl con manubri", "sets": 2, "reps": { "min": 10, "max": 15 }, "restSec": 60, "group": "A" },
+          { "name": "Pushdown tricipiti", "sets": 2, "reps": { "min": 10, "max": 15 }, "restSec": 60, "group": "A", "notes": "Gomiti fermi ai fianchi." }
+        ]
+      },
+      {
+        "id": "lower-1",
+        "name": "Lower 1 – Quadricipiti",
+        "weekday": "martedi",
+        "muscleGroups": ["Quadricipiti", "Glutei", "Addome"],
+        "exercises": [
+          { "exerciseId": "leg-press", "name": "Leg Press", "sets": 3, "reps": { "min": 8, "max": 12 }, "restSec": 150, "load": { "value": 70, "unit": "%1RM" } },
+          { "exerciseId": "leg-extension", "name": "Leg Extension", "sets": 2, "reps": { "min": 10, "max": 15 }, "restSec": 90 },
+          { "exerciseId": "plank", "name": "Plank", "sets": 2, "durationSec": { "min": 30, "max": 45 }, "restSec": 60 }
+        ]
+      },
+      {
+        "id": "upper-2",
+        "name": "Upper 2 – Spalle e braccia",
+        "weekday": "giovedi",
+        "muscleGroups": ["Spalle", "Petto alto", "Braccia"],
+        "exercises": [
+          { "name": "Shoulder Press", "sets": 3, "reps": { "min": 8, "max": 12 }, "restSec": 120, "alternatives": ["Lento avanti con manubri"] },
+          { "name": "Alzate laterali", "sets": 3, "reps": { "min": 12, "max": 20 }, "restSec": 45, "group": "B" },
+          { "name": "Face pull", "sets": 3, "reps": { "min": 12, "max": 15 }, "restSec": 45, "group": "B" },
+          { "name": "Curl a martello", "sets": 3, "reps": { "min": 10, "max": 12 }, "restSec": 45, "group": "B" }
+        ]
+      },
+      {
+        "id": "lower-2",
+        "name": "Lower 2 – Glutei e femorali",
+        "weekday": "venerdi",
+        "muscleGroups": ["Glutei", "Femorali", "Polpacci"],
+        "exercises": [
+          { "name": "Hip Thrust Machine", "sets": 3, "reps": { "min": 8, "max": 12 }, "restSec": 120 },
+          { "name": "Stacco rumeno con manubri", "sets": 3, "reps": { "min": 8, "max": 12 }, "restSec": 120, "rpe": 8 },
+          { "name": "Split squat assistito", "sets": 2, "reps": { "min": 8, "max": 12 }, "perSide": true, "restSec": 90 },
+          { "name": "Calf Raise", "sets": 3, "reps": { "min": 10, "max": 15 }, "restSec": 60 }
+        ]
+      }
+    ]
+  }
+}

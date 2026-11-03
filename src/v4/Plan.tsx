@@ -1,6 +1,7 @@
 import { Calculator, CheckCircle2, Folder, ChevronRight, Clock, Dumbbell, Layers, Library, Pencil, Play, PlayCircle, Plus, Timer } from 'lucide-react';
 import { allExercises } from '../data/catalog';
 import { FreeStartButton } from './Routines';
+import { ProgramsSection } from './Programs';
 import { sessionMeta } from '../lib/meta';
 import { useData } from '../app/store';
 import { DAYS, DAY_BY_ID } from '../data/program';
@@ -68,6 +69,8 @@ export function Plan() {
           );
         })}
       </div>
+
+      <ProgramsSection />
 
       <Section title="Le mie schede" action={<button className="link" onClick={() => navigate('/routine/nuova')}>+ Nuova</button>}>
         {settings.routines.length ? (

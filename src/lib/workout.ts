@@ -10,7 +10,7 @@ export function buildSession(dayId: DayId, settings: Settings, calibration: bool
 }
 
 /** New exercise log for a slot, pre-filled with the last loads used. */
-export function logFor(s: { id: string; exerciseId: string; todaySets: number; repsMin: number; repsMax: number; unit: 'reps' | 'sec' | 'min'; perSide: boolean; restSec?: number; group?: string }, history: Session[]): ExerciseLog {
+export function logFor(s: { id: string; exerciseId: string; todaySets: number; repsMin: number; repsMax: number; unit: 'reps' | 'sec' | 'min'; perSide: boolean; restSec?: number; group?: string; notes?: string; warmupSets?: number }, history: Session[]): ExerciseLog {
   const prev = lastLog(history, s.exerciseId)?.log;
   const prevWeights = prev?.sets.filter((x) => x.done && x.type !== 'warmup').map((x) => x.weight) ?? [];
   return {
@@ -21,8 +21,11 @@ export function logFor(s: { id: string; exerciseId: string; todaySets: number; r
     repsMax: s.repsMax,
     unit: s.unit,
     perSide: s.perSide,
-    sets: Array.from({ length: s.todaySets }, (_, i) => ({ weight: prevWeights[Math.min(i, prevWeights.length - 1)] ?? null, reps: null, done: false })),
-    note: '',
+    sets: [
+      ...Array.from({ length: Math.min(5, s.warmupSets ?? 0) }, () => ({ weight: null, reps: null, done: false, type: 'warmup' as const })),
+      ...Array.from({ length: s.todaySets }, (_, i) => ({ weight: prevWeights[Math.min(i, prevWeights.length - 1)] ?? null, reps: null, done: false })),
+    ],
+    note: s.notes ?? '',
     ...(s.restSec != null ? { restSec: s.restSec } : {}),
     ...(s.group ? { group: s.group } : {}),
   };

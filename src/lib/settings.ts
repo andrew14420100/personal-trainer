@@ -15,6 +15,50 @@ export interface RoutineItem {
   restSec?: number;
   /** Superset letter: consecutive items with the same letter are alternated. */
   group?: string;
+  // ── optional prescription details (Workout Exchange v1) ──
+  rpe?: number;
+  rir?: number;
+  /** Indicative load, only if the program specifies it. */
+  load?: { value: number; unit: 'kg' | 'lb' | '%1RM' };
+  warmupSets?: number;
+  notes?: string;
+  alternatives?: string[];
+}
+
+/** Phase of a multi-week program (e.g. accumulo, intensificazione, scarico). */
+export interface ProgramPhase {
+  name: string;
+  fromWeek: number;
+  toWeek: number;
+  deload: boolean;
+  /** Sets added (or removed, negative) to every exercise during the phase. */
+  setsDelta: number;
+  rpe?: number;
+  rir?: number;
+  notes?: string;
+}
+
+/** Multi-day, multi-week program. Each day is stored as a regular Routine (routineId). */
+export interface Program {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  goal: string;
+  level: string;
+  durationWeeks: number;
+  daysPerWeek: number;
+  recommendedWeekdays: string[];
+  progression: string;
+  phases: ProgramPhase[];
+  days: { id: string; name: string; weekday?: string; muscleGroups: string[]; notes?: string; routineId: string }[];
+  folder: string;
+  archived: boolean;
+  createdAt: number;
+  updatedAt: number;
+  /** Stable key of the imported content (to detect a second import of the same program). */
+  sourceKey: string;
+  activatedAt?: number;
 }
 
 export interface Routine {
@@ -104,6 +148,10 @@ export interface Settings {
   rescheduleSince: string;
   /** Last time a backup file was exported (ms). */
   lastBackupAt: number;
+  programs: Program[];
+  /** '' = the original 4-day plan is the current program. */
+  activeProgramId: string;
+  previousProgramIds: string[];
   reminders: { time: string; minutesBefore: number };
   /** Plates available in the gym (kg, per side) and bar weight, for the plate calculator. */
   plates: { bar: number; available: number[] };
@@ -161,6 +209,9 @@ export const DEFAULT_SETTINGS: Settings = {
   tourDone: false,
   rescheduleSince: '',
   lastBackupAt: 0,
+  programs: [],
+  activeProgramId: '',
+  previousProgramIds: [],
   reminders: { time: '18:30', minutesBefore: 30 },
   plates: { bar: 20, available: [25, 20, 15, 10, 5, 2.5, 1.25] },
 };

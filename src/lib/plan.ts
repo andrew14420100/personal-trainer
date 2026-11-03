@@ -28,6 +28,8 @@ export interface EffectiveSlot extends Slot {
   variants?: string[];
   /** Superset letter (edited days / routines only). */
   group?: string;
+  notes?: string;
+  warmupSets?: number;
 }
 
 export function effectiveSlot(slot: Slot, settings: Settings, calibration: boolean): EffectiveSlot {
@@ -76,6 +78,8 @@ export function itemsToSlots(items: RoutineItem[], dayId: DayId, settings: Setti
         restSec: it.restSec ?? settings.restOverrides[it.exerciseId] ?? ex.restSec,
         overridden: true,
         group: it.group,
+        notes: it.notes,
+        warmupSets: it.warmupSets,
       };
     });
 }

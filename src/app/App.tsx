@@ -13,6 +13,8 @@ import { Profile } from '../v4/Profile';
 import { Videos } from '../v4/Videos';
 import { DayEditor, Library, RoutineEditor, RoutineView } from '../v4/Routines';
 import { Tools } from '../v4/Tools';
+import { ImportPage } from '../v4/Import';
+import { ProgramView } from '../v4/Programs';
 import { LivePill, RestBar, TabBar } from '../v4/Shell';
 import { Agenda } from '../v4/Agenda';
 import { More } from '../v4/More';
@@ -60,6 +62,12 @@ export function App() {
       break;
     case 'libreria':
       screen = <Library />;
+      break;
+    case 'importa':
+      screen = <ImportPage />;
+      break;
+    case 'programma':
+      screen = <ProgramView id={path[1]} />;
       break;
     case 'strumenti':
       screen = <Tools />;
