@@ -170,6 +170,8 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
       <h2 className="t-h2 mt24" style={{ marginBottom: 10 }}>
         Tecnica
       </h2>
+      {!ex.setup.length && !ex.errors.length && <p className="t-sm c3">Esercizio creato da te: nessuna guida tecnica. Puoi aggiungere un tuo video e le note qui sotto.</p>}
+      {ex.setup.length > 0 && (
       <Acc title="Regolazione della macchina" icon={<Settings2 size={18} className="c3" />}>
         <ol className="steps">
           {ex.setup.map((s) => (
@@ -177,6 +179,8 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
           ))}
         </ol>
       </Acc>
+      )}
+      {ex.execution.length > 0 && (
       <Acc title="Esecuzione" icon={<ListChecks size={18} className="c3" />}>
         <ol className="steps">
           {ex.execution.map((s) => (
@@ -194,6 +198,8 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
           ))}
         </div>
       </Acc>
+      )}
+      {ex.errors.length > 0 && (
       <Acc title="Errori e correzioni" icon={<AlertTriangle size={18} color="var(--bad)" />} badge={<span className="chip bad sm">{ex.errors.length}</span>}>
         {ex.errors.map((e) => (
           <div key={e.id} className="fault">
@@ -218,6 +224,8 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
           </div>
         ))}
       </Acc>
+      )}
+      {ex.alternatives.length > 0 && (
       <Acc title="Alternative" icon={<Repeat size={18} className="c3" />}>
         <div className="col" style={{ gap: 10 }}>
           {ex.alternatives.map((a) => (
@@ -228,6 +236,7 @@ export function Exercise({ id, slotId }: { id: string; slotId?: string }) {
           ))}
         </div>
       </Acc>
+      )}
       <Acc title="Altri video (con voce)" icon={<ExternalLink size={18} className="c3" />}>
         <p className="t-xs c3" style={{ marginTop: 0 }}>
           Tutorial più lunghi e parlati: si aprono su YouTube, non vengono riprodotti nell’app.

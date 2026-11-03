@@ -41,7 +41,7 @@ async function layoutChecks(page, label) {
     document.querySelectorAll('body *').forEach((el) => {
       const b = el.getBoundingClientRect();
       if (!b.width || getComputedStyle(el).position === 'fixed') return;
-      if (el.closest('.chart,.sheet-bg,.hero,.vplayer,.ex-thumb,.plan-card .thumb,.anatomy')) return; // clipped (overflow:hidden)
+      if (el.closest('.chart,.sheet-bg,.hero,.vplayer,.ex-thumb,.plan-card .thumb,.anatomy,.hscroll')) return; // clipped (overflow:hidden)
       if (b.right > vw + 1 || b.left < -1) over.push(`${el.tagName.toLowerCase()}.${el.className}`.slice(0, 60));
     });
     const unnamed = [...document.querySelectorAll('button, a[href], input, select, textarea')].filter((el) => {
@@ -314,6 +314,148 @@ async function run(deviceName, label, full) {
     await page.goto(BASE + '/#/progressi?tab=storico');
     check(`[${label}] local history offline`, (await page.locator('.list-row').count()) === 2);
     await ctx.setOffline(false);
+  }
+
+  if (full) {
+    // ── 4.1: library, routines, supersets, set types, warm-up, cardio, free workout ──
+    await page.goto(BASE + '/#/libreria');
+    await page.getByLabel('Cerca esercizio').fill('squat');
+    check(`[${label}] library search`, (await page.locator('.ex-row').count()) >= 3);
+    await page.getByLabel('Cerca esercizio').fill('');
+    await page.getByRole('tab', { name: 'Cardio' }).click();
+    check(`[${label}] library cardio filter`, await page.getByText('Tapis roulant').first().isVisible());
+    await layoutChecks(page, `${label} library`);
+
+    await page.goto(BASE + '/#/routine/nuova');
+    await page.getByLabel('Nome della scheda').fill('Braccia test');
+    await page.getByRole('button', { name: 'Aggiungi esercizi' }).click();
+    const dlg = page.getByRole('dialog');
+    await dlg.getByLabel('Cerca esercizio').fill('curl con bilanciere');
+    await dlg.locator('.ex-row').first().click();
+    await dlg.getByLabel('Cerca esercizio').fill('french press');
+    await dlg.locator('.ex-row').first().click();
+    await dlg.getByRole('button', { name: /^Aggiungi \(2\)/ }).click();
+    await page.getByRole('button', { name: /Superserie col successivo/ }).click();
+    await page.getByRole('button', { name: 'Salva scheda' }).click();
+    await page.getByRole('button', { name: 'Duplica' }).waitFor();
+    check(`[${label}] routine saved with superset`, (await page.getByText(/superserie A/).count()) === 2);
+    await page.getByRole('button', { name: 'Inizia allenamento' }).click();
+    await page.waitForSelector('.wk-top');
+    check(`[${label}] routine workout started`, (await page.getByText('Curl con bilanciere').count()) >= 1);
+    await page.getByLabel('Carico serie 1 in kg').fill('30');
+    await page.getByLabel('Ripetizioni serie 1').fill('10');
+    await page.getByRole('button', { name: 'Segna serie 1 come completata' }).click();
+    await page.locator('.ex-group', { hasText: /^2\// }).first().waitFor({ timeout: 3000 }).catch(() => {});
+    check(`[${label}] smart superset jumps to the paired exercise`, (await page.locator('.ex-group').first().innerText()).startsWith('2/'));
+    check(`[${label}] no rest timer mid-superset`, (await page.locator('.rest-bar').count()) === 0);
+    await page.getByLabel('Carico serie 1 in kg').fill('20');
+    await page.getByLabel('Ripetizioni serie 1').fill('10');
+    await page.getByRole('button', { name: 'Segna serie 1 come completata' }).click();
+    await wait(400);
+    check(`[${label}] end of superset round: rest + back to first`, (await page.locator('.rest-bar').count()) === 1 && (await page.locator('.ex-group').first().innerText()).startsWith('1/'));
+    await page.getByRole('button', { name: 'Salta recupero' }).click();
+    // set type
+    await page.getByRole('button', { name: /^Serie 2: tipo normale/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /A cedimento/ }).click();
+    await wait(200);
+    check(`[${label}] set type changed (failure)`, (await page.locator('.set-r .idx.t-failure').count()) === 1);
+    // warm-up generator
+    await page.getByRole('button', { name: 'Riscaldamento' }).click();
+    await wait(300);
+    check(`[${label}] warm-up sets generated`, (await page.locator('.set-r .idx.t-warmup').count()) === 3);
+    // add cardio during the session
+    await page.getByRole('button', { name: 'Elenco esercizi' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Aggiungi esercizi' }).click();
+    await page.getByRole('dialog').getByLabel('Cerca esercizio').fill('tapis');
+    await page.getByRole('dialog').locator('.ex-row').first().click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Aggiungi \(1\)/ }).click();
+    await wait(300);
+    await page.getByRole('button', { name: 'Elenco esercizi' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Tapis roulant \d/ }).click();
+    await page.getByLabel('Minuti 1').fill('20');
+    await page.getByLabel('Chilometri 1').fill('2,5');
+    await page.getByRole('button', { name: 'Segna blocco 1 come completato' }).click();
+    await wait(200);
+    check(`[${label}] cardio block logged`, (await page.locator('.set-r.done').count()) >= 1);
+    await page.screenshot({ path: join(shots, `${label}-workout-4.1.png`), fullPage: true });
+    await layoutChecks(page, `${label} workout 4.1`);
+    await page.getByRole('button', { name: 'Elenco esercizi' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Termina' }).click();
+    check(`[${label}] finish offers to update the routine`, await page.getByText(/Aggiorna “Braccia test”/).isVisible());
+    await page.getByRole('button', { name: 'Salva allenamento' }).click();
+    await page.waitForSelector('text=Allenamento salvato');
+    check(`[${label}] share image button`, await page.getByRole('button', { name: /Condividi riepilogo/ }).isVisible());
+
+    // free workout saved as a new routine
+    await page.goto(BASE + '/#/allenamenti');
+    await page.getByRole('button', { name: /Allenamento libero/ }).click();
+    await page.waitForSelector('text=Aggiungi gli esercizi');
+    await page.getByRole('button', { name: 'Aggiungi esercizi' }).first().click();
+    await page.getByRole('dialog').getByLabel('Cerca esercizio').fill('hammer');
+    await page.getByRole('dialog').locator('.ex-row').first().click();
+    await page.getByRole('dialog').getByRole('button', { name: /^Aggiungi \(1\)/ }).click();
+    await page.getByLabel('Carico serie 1 in kg').fill('14');
+    await page.getByLabel('Ripetizioni serie 1').fill('12');
+    await page.getByRole('button', { name: 'Segna serie 1 come completata' }).click();
+    await page.getByRole('button', { name: 'Salta recupero' }).click().catch(() => {});
+    await page.getByRole('button', { name: 'Elenco esercizi' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Termina' }).click();
+    await page.getByRole('switch', { name: 'Salva le modifiche nella scheda' }).click();
+    await page.getByLabel('Nome della nuova scheda').fill('Libero salvato');
+    await page.getByRole('button', { name: 'Salva allenamento' }).click();
+    await page.waitForSelector('text=Allenamento salvato');
+    await page.goto(BASE + '/#/allenamenti');
+    check(`[${label}] free workout saved as routine`, await page.getByText('Libero salvato').isVisible());
+
+    // edit a plan day, then restore
+    await page.goto(BASE + '/#/giorno/upper-b/modifica');
+    await page.getByRole('button', { name: /^Rimuovi / }).first().click();
+    await page.getByRole('button', { name: 'Salva il giorno' }).click();
+    await page.waitForSelector('.ex-row');
+    check(`[${label}] plan day edited (7 → 6 exercises)`, (await page.locator('.ex-row').count()) === 6);
+    await page.goto(BASE + '/#/giorno/upper-b/modifica');
+    await page.getByRole('button', { name: /Ripristina la scheda originale/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Ripristina' }).click();
+    await page.waitForSelector('.ex-row');
+    check(`[${label}] plan day restored`, (await page.locator('.ex-row').count()) === 7);
+
+    // statistics
+    for (const [tab, text] of [['Muscoli', 'più allenati'], ['Record', 'Migliori per esercizio'], ['Report', 'giorni diversi'], ['Corpo', 'Foto dei progressi']]) {
+      await page.goto(BASE + '/#/progressi');
+      await page.getByRole('tab', { name: tab }).click();
+      check(`[${label}] progress tab ${tab}`, (await page.getByText(text).count()) >= 1);
+      await layoutChecks(page, `${label} progress ${tab}`);
+    }
+    await page.goto(BASE + '/#/progressi?tab=muscoli');
+    await page.screenshot({ path: join(shots, `${label}-muscles.png`), fullPage: true });
+    await page.goto(BASE + '/#/progressi?tab=record');
+    await page.screenshot({ path: join(shots, `${label}-records.png`), fullPage: true });
+    await page.goto(BASE + '/#/');
+    check(`[${label}] home: weekly goal ring`, (await page.locator('svg[aria-label*="allenamenti su"]').count()) === 1);
+    check(`[${label}] home: 7-day muscle map`, await page.getByText('Muscoli allenati · 7 giorni').isVisible());
+    await page.screenshot({ path: join(shots, `${label}-home-4.1.png`), fullPage: true });
+
+    // tools
+    await page.goto(BASE + '/#/strumenti');
+    await page.getByLabel('Peso totale').fill('100');
+    check(`[${label}] plate calculator 100 kg`, (await page.locator('.chip.accent').allInnerTexts()).slice(0, 2).join(',') === '25,15');
+    await page.getByLabel('Carico sollevato').fill('100');
+    await page.getByLabel('Ripetizioni eseguite').fill('5');
+    check(`[${label}] 1RM estimate`, await page.getByText('116,7 kg').isVisible());
+
+    // units
+    await page.goto(BASE + '/#/profilo');
+    await page.getByRole('tab', { name: 'Libbre (lb)' }).click();
+    await wait(500);
+    await page.goto(BASE + '/#/progressi?tab=record');
+    check(`[${label}] pounds shown after switching unit`, (await page.getByText(/ lb/).count()) >= 1);
+    await page.goto(BASE + '/#/profilo');
+    await page.getByRole('tab', { name: 'Chilogrammi (kg)' }).click();
+
+    // CSV
+    const [csv] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: /Esporta tutte le serie/ }).click()]);
+    const text = readFileSync(await csv.path(), 'utf8');
+    check(`[${label}] CSV export has set rows`, text.split('\r\n').length > 5 && text.includes('Curl con bilanciere'));
   }
   await ctx.close();
 }

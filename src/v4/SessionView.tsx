@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Check, Trash2, Trophy } from 'lucide-react';
+import { Check, Share2, Trash2, Trophy } from 'lucide-react';
+import { shareImage } from '../lib/exports';
+import { deliverFile } from '../lib/backup';
+import { exName } from '../data/catalog';
+import { sessionMeta } from '../lib/meta';
 import { useData } from '../app/store';
-import { DAY_BY_ID } from '../data/program';
-import { EXERCISE_BY_ID } from '../data/exercises';
 import { deleteSession, saveSession, type Session, type SetLog } from '../lib/db';
 import { doneSets, exerciseHistory, logVolume, previousSameDay, sessionDurationMin, sessionReps, sessionSets, sessionVolume } from '../lib/stats';
 import { fullDate, num, time, volume } from '../lib/format';
@@ -23,7 +25,7 @@ function Delta({ cur, prev }: { cur: number; prev: number | null }) {
 }
 
 export function SessionView({ id, justFinished }: { id: string; justFinished: boolean }) {
-  const { sessions, ready } = useData();
+  const { sessions, ready, settings } = useData();
   const s = sessions.find((x) => x.id === id);
   if (!ready) return null;
   if (!s || s.status !== 'completed')
@@ -35,7 +37,7 @@ export function SessionView({ id, justFinished }: { id: string; justFinished: bo
         </Empty>
       </main>
     );
-  const day = DAY_BY_ID[s.dayId];
+  const day = sessionMeta(s, settings);
   const prev = previousSameDay(sessions, s);
   const records = s.exercises
     .map((l) => {
@@ -87,7 +89,7 @@ export function SessionView({ id, justFinished }: { id: string; justFinished: bo
       {records.length > 0 && (
         <div className="mt12">
           <Notice icon={<Trophy size={17} color="var(--warn)" />}>
-            <b>Nuovi massimi di carico:</b> {records.map((r) => `${EXERCISE_BY_ID[r.id].name} ${num(r.top, 2)} kg (prima ${num(r.best, 2)})`).join(' · ')}
+            <b>Nuovi massimi di carico:</b> {records.map((r) => `${exName(r.id)} ${num(r.top, 2)} kg (prima ${num(r.best, 2)})`).join(' · ')}
           </Notice>
         </div>
       )}
@@ -97,8 +99,22 @@ export function SessionView({ id, justFinished }: { id: string; justFinished: bo
           <p className="t-sm c2">{s.note}</p>
         </Section>
       )}
+      <button
+        className="btn block mt24"
+        onClick={async () => {
+          try {
+            const blob = await shareImage(s, settings);
+            const how = await deliverFile(`forma-lab-${new Date(s.startedAt).toISOString().slice(0, 10)}.png`, blob, 'image/png');
+            toast(how === 'shared' ? 'Immagine pronta da condividere' : 'Immagine scaricata');
+          } catch (e) {
+            toast((e as Error).message || 'Condivisione non riuscita');
+          }
+        }}
+      >
+        <Share2 size={17} /> Condividi riepilogo (immagine)
+      </button>
       {justFinished && (
-        <button className="btn primary lg block mt24" onClick={() => navigate('/', { replace: true })}>
+        <button className="btn primary lg block mt8" onClick={() => navigate('/', { replace: true })}>
           <Check size={18} /> Fatto
         </button>
       )}
@@ -159,7 +175,7 @@ function SessionEditor({ session }: { session: Session }) {
     >
       <div className="list">
         {draft.exercises.map((l, ei) => {
-          const ex = EXERCISE_BY_ID[l.exerciseId];
+          const ex = { name: exName(l.exerciseId) };
           const sets = edit ? l.sets : doneSets(l);
           return (
             <div key={l.slotId} style={{ padding: '12px 14px' }}>

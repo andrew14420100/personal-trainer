@@ -1,4 +1,4 @@
-import { effectiveDay } from './plan';
+import { effectiveDay, type EffectiveSlot } from './plan';
 import { getSession, saveSession, deleteSession, uid, type ExerciseLog, type Session, type SetLog } from './db';
 import { lastLog } from './stats';
 import type { Settings } from './settings';
@@ -6,28 +6,37 @@ import type { DayId } from '../data/types';
 
 /** Create a new active session, pre-filling loads from the last time each exercise was done. */
 export function buildSession(dayId: DayId, settings: Settings, calibration: boolean, history: Session[], now = Date.now()): Session {
-  const slots = effectiveDay(dayId, settings, calibration);
-  const exercises: ExerciseLog[] = slots.map((s) => {
-    const prev = lastLog(history, s.exerciseId)?.log;
-    const prevWeights = prev?.sets.filter((x) => x.done).map((x) => x.weight) ?? [];
-    const sets: SetLog[] = Array.from({ length: s.todaySets }, (_, i) => ({
-      weight: prevWeights[Math.min(i, prevWeights.length - 1)] ?? null,
-      reps: null,
-      done: false,
-    }));
-    return {
-      slotId: s.id,
-      exerciseId: s.exerciseId,
-      targetSets: s.todaySets,
-      repsMin: s.repsMin,
-      repsMax: s.repsMax,
-      unit: s.unit,
-      perSide: s.perSide,
-      sets,
-      note: '',
-    };
-  });
-  return { id: uid(), dayId, startedAt: now, status: 'active', calibration, currentIndex: 0, exercises };
+  return sessionFromSlots(dayId, effectiveDay(dayId, settings, calibration), calibration, history, now);
+}
+
+/** New exercise log for a slot, pre-filled with the last loads used. */
+export function logFor(s: { id: string; exerciseId: string; todaySets: number; repsMin: number; repsMax: number; unit: 'reps' | 'sec' | 'min'; perSide: boolean; restSec?: number; group?: string }, history: Session[]): ExerciseLog {
+  const prev = lastLog(history, s.exerciseId)?.log;
+  const prevWeights = prev?.sets.filter((x) => x.done && x.type !== 'warmup').map((x) => x.weight) ?? [];
+  return {
+    slotId: s.id,
+    exerciseId: s.exerciseId,
+    targetSets: s.todaySets,
+    repsMin: s.repsMin,
+    repsMax: s.repsMax,
+    unit: s.unit,
+    perSide: s.perSide,
+    sets: Array.from({ length: s.todaySets }, (_, i) => ({ weight: prevWeights[Math.min(i, prevWeights.length - 1)] ?? null, reps: null, done: false })),
+    note: '',
+    ...(s.restSec != null ? { restSec: s.restSec } : {}),
+    ...(s.group ? { group: s.group } : {}),
+  };
+}
+
+export function sessionFromSlots(dayId: Session['dayId'], slots: EffectiveSlot[], calibration: boolean, history: Session[], now = Date.now(), title?: string): Session {
+  return { id: uid(), dayId, ...(title ? { title } : {}), startedAt: now, status: 'active', calibration, currentIndex: 0, exercises: slots.map((s) => logFor(s, history)) };
+}
+
+/** Start a custom routine ('r:<id>') or an empty free workout ('free'). */
+export async function startCustom(dayId: Session['dayId'], title: string, slots: EffectiveSlot[], history: Session[]): Promise<Session> {
+  const s = sessionFromSlots(dayId, slots, false, history, Date.now(), title);
+  await saveSession(s);
+  return s;
 }
 
 export async function startSession(dayId: DayId, settings: Settings, calibration: boolean, history: Session[]): Promise<Session> {

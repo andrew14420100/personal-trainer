@@ -47,9 +47,11 @@ function secure(res: Response, extra: Record<string, string> = {}): Response {
   r.headers.set('Content-Security-Policy', CSP);
   r.headers.set('X-Content-Type-Options', 'nosniff');
   r.headers.set('X-Frame-Options', 'DENY');
-  // same-origin: no referrer ever leaves the site (YouTube included), but the login form still
-  // carries a real Origin header (with no-referrer browsers send "Origin: null").
-  r.headers.set('Referrer-Policy', 'same-origin');
+  // strict-origin-when-cross-origin: other sites receive only the bare origin (never paths or
+  // data). YouTube's embedded player REQUIRES a referrer since 2025: with "same-origin" it refuses
+  // to play (error 153), which is why videos did not show on the phone. The login form still
+  // carries a real Origin header.
+  r.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   r.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
   r.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   r.headers.set('Cross-Origin-Opener-Policy', 'same-origin');

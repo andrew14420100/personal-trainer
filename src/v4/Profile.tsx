@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Download, HardDrive, Info, Lock, LogOut, ShieldCheck, Smartphone, Trash2, Upload, Video } from 'lucide-react';
+import { BellRing, ChevronRight, Dumbbell, FileSpreadsheet, Flame, Download, HardDrive, Info, Lock, LogOut, ShieldCheck, Smartphone, Trash2, Upload, Video } from 'lucide-react';
 import { useData, useSettingsUpdater } from '../app/store';
-import { DAYS, SLOTS, SLOT_VARIANTS } from '../data/program';
-import { EXERCISES, EXERCISE_BY_ID } from '../data/exercises';
+import { DAYS } from '../data/program';
 import { PHOTOS } from '../data/media';
 import { kvGet, restore, snapshot, wipeAll, type Snapshot } from '../lib/db';
 import { backupFileName, decryptBackup, deliverFile, encryptBackup, isEncrypted, makeBackup, validateBackup, type EncryptedBackup } from '../lib/backup';
@@ -12,6 +11,8 @@ import { timer } from '../lib/timer';
 import { navigate } from '../lib/router';
 import type { MigrationReport } from '../lib/migration';
 import type { Settings as S } from '../lib/settings';
+import { remindersIcs, setsCsv } from '../lib/exports';
+import { MUSCLE_LABEL } from '../data/muscles';
 import { Acc, AppBar, Confirm, Notice, Section, Seg, Sheet, Switch, toast } from './kit';
 
 const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
@@ -86,7 +87,27 @@ export function Profile() {
         </div>
       </Section>
 
-      <PlanEditor />
+      <Section title="Scheda">
+        <div className="list">
+          {DAYS.map((d) => (
+            <button key={d.id} className="list-row" style={{ ['--day' as string]: d.accent }} onClick={() => navigate(`/giorno/${d.id}/modifica`)}>
+              <span className="dot" />
+              <span className="grow">
+                <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                  {d.weekdayLabel} · {d.name}
+                </span>
+                <span className="t-xs c3">{settings.dayEdits[d.id] ? 'Personalizzato' : 'Originale'} · modifica esercizi, serie, recuperi, superserie</span>
+              </span>
+              <ChevronRight size={18} className="c3" />
+            </button>
+          ))}
+        </div>
+        <p className="t-xs c3 mt8">Le schede personali si creano da Allenamenti → Le mie schede.</p>
+      </Section>
+
+      <TrainingPrefs />
+      <CustomExercises />
+      <Reminders />
 
       <Section title="Video">
         <button className="list-row" style={{ borderRadius: 'var(--r-lg)', background: 'var(--s1)', width: '100%' }} onClick={() => navigate('/videoteca')}>
@@ -104,6 +125,7 @@ export function Profile() {
       <Section title="I tuoi dati">
         <StorageInfo sessions={sessions.length} measurements={measurements.length} />
         <BackupTools />
+        <CsvExport />
         <PreviousVersion />
       </Section>
 
@@ -159,121 +181,12 @@ export function Profile() {
           </ul>
           <p className="t-xs c2">Video: proprietà dei rispettivi autori, incorporati con il player ufficiale YouTube senza modifiche. Caratteri: Manrope e Inter (SIL OFL). Icone: Lucide (ISC).</p>
           <p className="t-xs c3">
-            Le indicazioni tecniche sono informative e non sostituiscono un medico o un professionista. FORMA LAB 4.0 · build {__BUILD_DATE__}
+            Le indicazioni tecniche sono informative e non sostituiscono un medico o un professionista. FORMA LAB 4.1 · build {__BUILD_DATE__}
             {__PREVIEW__ ? ' · ANTEPRIMA' : ''}
           </p>
         </Acc>
       </Section>
     </main>
-  );
-}
-
-function PlanEditor() {
-  const { settings } = useData();
-  const update = useSettingsUpdater();
-  const [open, setOpen] = useState(false);
-  const setOverride = (slotId: string, patch: Record<string, number | string | undefined>) =>
-    update((s) => {
-      const cur = { ...(s.slotOverrides[slotId] ?? {}), ...patch };
-      Object.keys(cur).forEach((k) => (cur as Record<string, unknown>)[k] === undefined && delete (cur as Record<string, unknown>)[k]);
-      const all = { ...s.slotOverrides };
-      if (Object.keys(cur).length) all[slotId] = cur;
-      else delete all[slotId];
-      return { ...s, slotOverrides: all };
-    });
-  const count = Object.keys(settings.slotOverrides).length + Object.keys(settings.restOverrides).length;
-  const n = (v: string, lo: number, hi: number) => (v.trim() === '' ? undefined : Math.max(lo, Math.min(hi, Math.round(Number(v)))) || undefined);
-  return (
-    <Section title="Scheda" action={<button className="link" onClick={() => setOpen(true)}>Modifica</button>}>
-      <p className="t-sm c2" style={{ margin: 0 }}>
-        {count ? `${count} personalizzazioni attive (serie, ripetizioni, recuperi o varianti).` : 'Stai usando la scheda originale: 4 giorni, 26 posizioni.'}
-      </p>
-      <Sheet open={open} onClose={() => setOpen(false)} label="Modifica scheda">
-        <h3 className="t-h2">Modifica scheda</h3>
-        <p className="t-sm c2" style={{ margin: '6px 0 12px' }}>
-          Tra parentesi i valori originali. Lascia vuoto per usare l’originale.
-        </p>
-        {DAYS.map((d) => (
-          <div key={d.id} style={{ marginBottom: 16 }}>
-            <div className="t-label" style={{ color: d.accent, marginBottom: 8 }}>
-              {d.weekdayLabel} · {d.name}
-            </div>
-            <div className="col" style={{ gap: 8 }}>
-              {SLOTS.filter((s) => s.dayId === d.id).map((s) => {
-                const o = settings.slotOverrides[s.id] ?? {};
-                const exId = o.exerciseId ?? s.exerciseId;
-                const ex = EXERCISE_BY_ID[exId];
-                return (
-                  <div key={s.id} className="card inset" style={{ padding: 12 }}>
-                    <div className="t-sm" style={{ fontWeight: 650 }}>
-                      {s.order}. {ex.name}
-                    </div>
-                    {SLOT_VARIANTS[s.id] && (
-                      <select className="input mt8" value={exId} onChange={(e) => setOverride(s.id, { exerciseId: e.target.value === s.exerciseId ? undefined : e.target.value })} aria-label="Variante">
-                        {SLOT_VARIANTS[s.id].map((v) => (
-                          <option key={v} value={v}>
-                            {EXERCISE_BY_ID[v].name}
-                            {v === s.exerciseId ? ' (predefinita)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginTop: 8 }}>
-                      {(
-                        [
-                          ['Serie', 'sets', s.sets, 1, 10],
-                          ['Min', 'repsMin', s.repsMin, 1, 300],
-                          ['Max', 'repsMax', s.repsMax, 1, 300],
-                        ] as const
-                      ).map(([lab, key, def, lo, hi]) => (
-                        <label key={key} className="t-xs c3">
-                          {lab} ({def})
-                          <input className="input" style={{ minHeight: 40, marginTop: 4 }} inputMode="numeric" defaultValue={o[key] ?? ''} placeholder={String(def)} onBlur={(e) => setOverride(s.id, { [key]: n(e.target.value, lo, hi) })} />
-                        </label>
-                      ))}
-                      <label className="t-xs c3">
-                        Rec. ({ex.restSec})
-                        <input
-                          className="input"
-                          style={{ minHeight: 40, marginTop: 4 }}
-                          inputMode="numeric"
-                          defaultValue={settings.restOverrides[exId] ?? ''}
-                          placeholder={String(ex.restSec)}
-                          onBlur={(ev) =>
-                            update((st) => {
-                              const r = { ...st.restOverrides };
-                              const v = Math.round(Number(ev.target.value));
-                              if (ev.target.value.trim() && v >= 10 && v <= 600) r[exId] = v;
-                              else delete r[exId];
-                              return { ...st, restOverrides: r };
-                            })
-                          }
-                        />
-                      </label>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-        <button
-          className="btn block ghost"
-          onClick={() =>
-            update((s) => ({ ...s, slotOverrides: {}, restOverrides: {} })).then(() => {
-              setOpen(false);
-              toast('Scheda originale ripristinata');
-            })
-          }
-        >
-          Ripristina scheda originale
-        </button>
-        <button className="btn block primary mt8" onClick={() => setOpen(false)}>
-          Fatto
-        </button>
-        <p className="t-xs c3 mt8">{EXERCISES.length} esercizi in archivio.</p>
-      </Sheet>
-    </Section>
   );
 }
 
@@ -488,5 +401,177 @@ function PreviousVersion() {
         </p>
       )}
     </div>
+  );
+}
+
+function TrainingPrefs() {
+  const { settings } = useData();
+  const update = useSettingsUpdater();
+  const set = <K extends keyof S>(k: K, v: S[K]) => update((s) => ({ ...s, [k]: v }));
+  return (
+    <Section title="Allenamento">
+      <div className="card col">
+        <div>
+          <div className="t-label">Unità di peso</div>
+          <div className="mt8">
+            <Seg
+              label="Unità di peso"
+              value={settings.unit}
+              onChange={(v) => set('unit', v)}
+              options={[
+                { value: 'kg', label: 'Chilogrammi (kg)' },
+                { value: 'lb', label: 'Libbre (lb)' },
+              ]}
+            />
+          </div>
+          <p className="t-xs c3 mt8" style={{ marginBottom: 0 }}>I dati restano salvati in kg: cambia solo come li vedi e li inserisci.</p>
+        </div>
+      </div>
+      <div className="list mt8">
+        <Row title="RPE per ogni serie" sub="Tocca il numero della serie per indicarlo">
+          <Switch checked={settings.rpePerSet} onChange={(v) => set('rpePerSet', v)} label="RPE per serie" />
+        </Row>
+        <Row title="Superserie intelligenti" sub="Dopo una serie passa al prossimo esercizio del gruppo; recupero a fine giro">
+          <Switch checked={settings.smartSuperset} onChange={(v) => set('smartSuperset', v)} label="Superserie intelligenti" />
+        </Row>
+      </div>
+      <div className="card mt8">
+        <div className="row t-h3">
+          <Flame size={18} /> Serie di riscaldamento
+        </div>
+        <p className="t-xs c3" style={{ margin: '6px 0 10px' }}>
+          Generate con il pulsante “Riscaldamento” in seduta, in percentuale del carico della prima serie di lavoro.
+        </p>
+        {settings.warmup.map((w, i) => (
+          <div key={i} className="row" style={{ marginBottom: 6 }}>
+            <span className="t-sm c3" style={{ width: 22 }}>
+              {i + 1}
+            </span>
+            <input
+              className="input"
+              inputMode="numeric"
+              defaultValue={w.pct}
+              aria-label={`Percentuale serie di riscaldamento ${i + 1}`}
+              onBlur={(e) => update((s) => ({ ...s, warmup: s.warmup.map((x, j) => (j === i ? { ...x, pct: Math.max(10, Math.min(95, Math.round(Number(e.target.value)) || x.pct)) } : x)) }))}
+            />
+            <span className="t-sm c3">% ×</span>
+            <input
+              className="input"
+              inputMode="numeric"
+              defaultValue={w.reps}
+              aria-label={`Ripetizioni serie di riscaldamento ${i + 1}`}
+              onBlur={(e) => update((s) => ({ ...s, warmup: s.warmup.map((x, j) => (j === i ? { ...x, reps: Math.max(1, Math.min(20, Math.round(Number(e.target.value)) || x.reps)) } : x)) }))}
+            />
+            <button className="icon-btn clear" aria-label={`Rimuovi serie di riscaldamento ${i + 1}`} disabled={settings.warmup.length <= 1} onClick={() => update((s) => ({ ...s, warmup: s.warmup.filter((_, j) => j !== i) }))}>
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+        {settings.warmup.length < 5 && (
+          <button className="btn sm ghost" onClick={() => update((s) => ({ ...s, warmup: [...s.warmup, { pct: 90, reps: 1 }] }))}>
+            + Aggiungi
+          </button>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function CustomExercises() {
+  const { settings } = useData();
+  const update = useSettingsUpdater();
+  const [del, setDel] = useState<string | null>(null);
+  if (!settings.customExercises.length) return null;
+  return (
+    <Section title="Esercizi creati da te">
+      <div className="list">
+        {settings.customExercises.map((c) => (
+          <div key={c.id} className="list-row">
+            <Dumbbell size={18} className="c3" />
+            <button className="grow" style={{ border: 0, background: 'none', color: 'inherit', textAlign: 'left', padding: 0 }} onClick={() => navigate(`/esercizio/${c.id}`)}>
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                {c.name}
+              </span>
+              <span className="t-xs c3">{c.primary.map((m) => MUSCLE_LABEL[m]).join(', ')}</span>
+            </button>
+            <button className="icon-btn clear" aria-label={`Elimina ${c.name}`} onClick={() => setDel(c.id)}>
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <Confirm
+        open={!!del}
+        onClose={() => setDel(null)}
+        title="Eliminare l’esercizio?"
+        body="Le sedute già registrate restano nello storico (con il nome “Esercizio eliminato”). Va tolto anche dalle schede che lo usano."
+        confirmLabel="Elimina"
+        danger
+        onConfirm={() => update((s) => ({ ...s, customExercises: s.customExercises.filter((x) => x.id !== del) }))}
+      />
+    </Section>
+  );
+}
+
+function Reminders() {
+  const { settings } = useData();
+  const update = useSettingsUpdater();
+  return (
+    <Section title="Promemoria">
+      <div className="card col">
+        <p className="t-sm c2" style={{ margin: 0 }}>
+          Un’app web su iPhone non può inviare notifiche senza un server. In alternativa aggiungi i 4 allenamenti settimanali al <b>Calendario</b> del telefono, con un avviso prima dell’orario.
+        </p>
+        <div className="row">
+          <label className="t-xs c3 grow">
+            Orario
+            <input type="time" className="input" aria-label="Orario del promemoria" value={settings.reminders.time} onChange={(e) => update((s) => ({ ...s, reminders: { ...s.reminders, time: e.target.value || '18:30' } }))} style={{ marginTop: 4 }} />
+          </label>
+          <label className="t-xs c3 grow">
+            Avviso (minuti prima)
+            <input
+              className="input"
+              inputMode="numeric"
+              aria-label="Minuti di anticipo dell’avviso"
+              defaultValue={settings.reminders.minutesBefore}
+              style={{ marginTop: 4 }}
+              onBlur={(e) => update((s) => ({ ...s, reminders: { ...s.reminders, minutesBefore: Math.max(0, Math.min(240, Math.round(Number(e.target.value)) || 0)) } }))}
+            />
+          </label>
+        </div>
+        {__PREVIEW__ ? (
+          <Notice>Nell’anteprima dentro Claude il download è bloccato.</Notice>
+        ) : (
+          <button
+            className="btn primary block"
+            onClick={async () => {
+              const how = await deliverFile('forma-lab-allenamenti.ics', remindersIcs(settings), 'text/calendar');
+              toast(how === 'shared' ? 'Scegli Calendario per aggiungerli' : 'File scaricato: aprilo per aggiungerli al calendario');
+            }}
+          >
+            <BellRing size={17} /> Aggiungi al calendario
+          </button>
+        )}
+        <p className="t-xs c3" style={{ margin: 0 }}>
+          Eventi ricorrenti ogni settimana (Lun, Mar, Gio, Ven). Se sposti un allenamento in FORMA LAB, il calendario del telefono non si aggiorna da solo.
+        </p>
+      </div>
+    </Section>
+  );
+}
+
+function CsvExport() {
+  const { sessions, settings } = useData();
+  if (__PREVIEW__) return null;
+  return (
+    <button
+      className="btn block mt8"
+      onClick={async () => {
+        const how = await deliverFile(`forma-lab-serie-${new Date().toISOString().slice(0, 10)}.csv`, setsCsv(sessions, settings), 'text/csv');
+        toast(how === 'shared' ? 'File CSV pronto' : 'File CSV scaricato');
+      }}
+    >
+      <FileSpreadsheet size={17} /> Esporta tutte le serie (CSV per Excel/Numbers)
+    </button>
   );
 }

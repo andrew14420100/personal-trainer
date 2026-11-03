@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { listMeasurements, listSessions, subscribe, type Measurement, type Session } from '../lib/db';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../lib/settings';
 import { isCalibration } from '../lib/plan';
+import { registerCustomExercises } from '../data/catalog';
+import { setWeightUnit } from '../lib/format';
 
 export interface AppData {
   ready: boolean;
@@ -39,6 +41,8 @@ async function load() {
     // Loads can resolve out of order: never replace a newer snapshot with an older one.
     if (my < applied) return;
     applied = my;
+    registerCustomExercises(settings.customExercises ?? []);
+    setWeightUnit(settings.unit ?? 'kg');
     snapshot = {
       ready: true,
       error: null,

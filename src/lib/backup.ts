@@ -98,9 +98,9 @@ export function backupFileName(encrypted: boolean, now = new Date()): string {
 }
 
 /** Share (iOS share sheet → "Salva su File") when available, otherwise download. */
-export async function deliverFile(name: string, content: string): Promise<'shared' | 'downloaded'> {
-  const blob = new Blob([content], { type: 'application/json' });
-  const file = typeof File !== 'undefined' ? new File([blob], name, { type: 'application/json' }) : null;
+export async function deliverFile(name: string, content: string | Blob, type = 'application/json'): Promise<'shared' | 'downloaded'> {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const file = typeof File !== 'undefined' ? new File([blob], name, { type: blob.type || type }) : null;
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
   if (file && nav.share && nav.canShare?.({ files: [file] })) {
     try {

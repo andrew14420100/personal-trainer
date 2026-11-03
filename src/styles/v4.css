@@ -1080,7 +1080,7 @@ textarea.input {
 .set-h,
 .set-r {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 46px;
+  grid-template-columns: 32px minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 46px;
   gap: 6px;
   align-items: center;
 }
@@ -1603,4 +1603,105 @@ table.data th {
 }
 .between {
   justify-content: space-between;
+}
+.search {
+  position: relative;
+}
+.search > svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.search .input {
+  padding-left: 38px;
+}
+.hscroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(-1 * var(--g));
+  padding: 2px var(--g);
+}
+.hscroll::-webkit-scrollbar {
+  display: none;
+}
+.hscroll > * {
+  flex: none;
+}
+.sheet .hscroll {
+  margin: 0 calc(-1 * var(--g));
+}
+.set-r .idx.t-warmup {
+  color: var(--warn);
+}
+.set-r .idx.t-drop {
+  color: var(--data);
+}
+.set-r .idx.t-failure {
+  color: var(--bad);
+}
+.heat {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+}
+.heat i {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--s3);
+}
+.bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 42px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.bar-row .b {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--s3);
+  overflow: hidden;
+}
+.bar-row .b i {
+  display: block;
+  height: 100%;
+  background: var(--data);
+  border-radius: 4px;
+}
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.photo-grid button {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 0;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--s2);
+}
+.photo-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-grid span {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.hscroll > .chip {
+  height: 34px;
+  padding: 0 14px;
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowRightLeft, CalendarX2, CheckCircle2, ChevronLeft, ChevronRight, Play, RotateCcw } from 'lucide-react';
+import { sessionMeta } from '../lib/meta';
 import { useData, useSettingsUpdater } from '../app/store';
-import { DAY_BY_ID } from '../data/program';
 import { effectiveDay, estimateMinutes } from '../lib/plan';
 import { sessionDurationMin, sessionSets, sessionVolume } from '../lib/stats';
 import { dateInfo, iso, mondayOf, monthGrid, parseIso, weekDates, addDays, type DateInfo } from '../lib/schedule';
@@ -122,7 +122,7 @@ function WeekList({ date, onSelect }: { date: string; onSelect: (d: string) => v
             </span>
             <span className="grow">
               <span className="t-sm" style={{ display: 'block', fontWeight: 650, color: i.plan || i.sessions.length ? 'var(--t1)' : 'var(--t3)' }}>
-                {i.sessions[0] ? DAY_BY_ID[i.sessions[0].dayId].name : i.plan ? i.plan.name : i.movedOut ? `${i.movedOut.day.name} (spostato)` : 'Riposo'}
+                {i.sessions[0] ? sessionMeta(i.sessions[0], settings).name : i.plan ? i.plan.name : i.movedOut ? `${i.movedOut.day.name} (spostato)` : 'Riposo'}
               </span>
               <span className={`t-xs ${i.state === 'done' ? 'c-ok' : i.state === 'skipped' ? 'c-bad' : 'c3'}`}>{stateLabel(i)}</span>
             </span>
@@ -169,11 +169,11 @@ function DayPanel({ date }: { date: string }) {
       </div>
 
       {info.sessions.map((s) => (
-        <button key={s.id} className="card tap" style={{ marginBottom: 8, ['--day' as string]: DAY_BY_ID[s.dayId].accent }} onClick={() => navigate(`/sessione/${s.id}`)}>
+        <button key={s.id} className="card tap" style={{ marginBottom: 8, ['--day' as string]: sessionMeta(s, settings).accent }} onClick={() => navigate(`/sessione/${s.id}`)}>
           <div className="t-label" style={{ color: 'var(--ok)' }}>
             <CheckCircle2 size={12} /> Completato
           </div>
-          <div className="t-h3 mt8">{DAY_BY_ID[s.dayId].name}</div>
+          <div className="t-h3 mt8">{sessionMeta(s, settings).name}</div>
           <div className="t-sm c2" style={{ marginTop: 4 }}>
             {sessionDurationMin(s)} min · {sessionSets(s)} serie · {volume(sessionVolume(s))}
           </div>

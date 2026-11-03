@@ -1,7 +1,7 @@
 {
   "name": "forma-lab",
   "private": true,
-  "version": "4.0.0",
+  "version": "4.1.0",
   "type": "module",
   "description": "FORMA LAB 2.0 — applicazione personale di allenamento (PWA per iPhone)",
   "scripts": {

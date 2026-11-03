@@ -1,4 +1,6 @@
-# FORMA LAB 4.0
+# FORMA LAB 4.1
+
+Novità della 4.1 (allenamento in stile app professionali, schede personalizzabili, statistiche, corpo, correzione dei video su iPhone): [docs/NOVITA_4.1.md](docs/NOVITA_4.1.md).
 
 Applicazione personale di allenamento: PWA privata e gratuita, installabile su iPhone e PC, con le funzioni locali disponibili anche offline. La 4.0 ricostruisce da zero interfaccia e navigazione. Restano invariati i dati, la scheda e la protezione d'accesso.
 
@@ -35,8 +37,8 @@ Apre l’app in sviluppo su `http://localhost:5173` (senza autenticazione: il mi
 | Comando | Cosa fa |
 |---|---|
 | `npm run build` | Type-check + build di produzione in `dist/` (PWA con service worker) |
-| `npm test` | 57 test unitari (scheda, calendario, migrazione 4.0, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
-| `npm run test:e2e` | 130 controlli end-to-end Playwright sulla build (iPhone 14 Pro, iPhone SE, desktop; migrazione, calendario, registro, offline, backup) |
+| `npm test` | 70 test unitari (scheda, calendario, migrazione 4.0, statistiche, progressione, IndexedDB, backup cifrato, PIN/TOTP, middleware, JWT Access) |
+| `npm run test:e2e` | 179 controlli end-to-end Playwright sulla build (iPhone 14 Pro, iPhone SE, desktop; migrazione, calendario, registro, offline, backup) |
 | `npm run verify:videos` | Riverifica i tutorial esterni e rigenera `docs/VERIFICA_VIDEO.md` |
 | `npx vite-node scripts/verify-real-videos.ts` | Riverifica i video reali e rigenera `docs/VIDEO_REALI.md` |
 | `npm run totp:new` | Genera passphrase, segreto TOTP e chiave di sessione per l’accesso privato |

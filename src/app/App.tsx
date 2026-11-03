@@ -11,6 +11,8 @@ import { Calendar } from '../v4/Calendar';
 import { Progress } from '../v4/Progress';
 import { Profile } from '../v4/Profile';
 import { Videos } from '../v4/Videos';
+import { DayEditor, Library, RoutineEditor, RoutineView } from '../v4/Routines';
+import { Tools } from '../v4/Tools';
 import { RestBar, TabBar } from '../v4/Shell';
 import { Empty, Notice, ToastHost } from '../v4/kit';
 import { UpdatePrompt } from '../components/UpdatePrompt';
@@ -43,7 +45,16 @@ export function App() {
       screen = <Plan />;
       break;
     case 'giorno':
-      screen = <DayView dayId={path[1] as DayId} />;
+      screen = path[2] === 'modifica' ? <DayEditor dayId={path[1] as DayId} /> : <DayView dayId={path[1] as DayId} />;
+      break;
+    case 'routine':
+      screen = path[1] === 'nuova' ? <RoutineEditor /> : path[2] === 'modifica' ? <RoutineEditor id={path[1]} /> : <RoutineView id={path[1]} />;
+      break;
+    case 'libreria':
+      screen = <Library />;
+      break;
+    case 'strumenti':
+      screen = <Tools />;
       break;
     case 'esercizio':
       screen = <Exercise id={path[1]} slotId={query.get('slot') ?? undefined} />;
@@ -90,7 +101,7 @@ export function App() {
           <Notice>Archivio locale non disponibile: {data.error}. In navigazione privata o con i dati dei siti bloccati i dati non possono essere salvati.</Notice>
         </div>
       )}
-      <div key={root + (path[1] ?? '')}>{screen}</div>
+      <div key={root + (path[1] ?? '') + (path[2] ?? '')}>{screen}</div>
       {!inWorkout && <TabBar />}
       <RestBar inWorkout={inWorkout} />
       <ToastHost />

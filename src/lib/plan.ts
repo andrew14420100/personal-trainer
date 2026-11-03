@@ -2,7 +2,7 @@ import { EXERCISE_BY_ID } from '../data/exercises';
 import { SLOTS, SLOT_VARIANTS, slotsForDay } from '../data/program';
 import type { DayId, Slot } from '../data/types';
 import type { Session } from './db';
-import type { Settings } from './settings';
+import type { RoutineItem, Settings } from './settings';
 
 export const CALIBRATION_SESSIONS = 4;
 
@@ -26,6 +26,8 @@ export interface EffectiveSlot extends Slot {
   restSec: number;
   overridden: boolean;
   variants?: string[];
+  /** Superset letter (edited days / routines only). */
+  group?: string;
 }
 
 export function effectiveSlot(slot: Slot, settings: Settings, calibration: boolean): EffectiveSlot {
@@ -47,7 +49,51 @@ export function effectiveSlot(slot: Slot, settings: Settings, calibration: boole
 }
 
 export function effectiveDay(dayId: DayId, settings: Settings, calibration: boolean): EffectiveSlot[] {
+  const edited = settings.dayEdits?.[dayId];
+  if (edited?.length) return itemsToSlots(edited, dayId, settings, calibration);
   return slotsForDay(dayId).map((s) => effectiveSlot(s, settings, calibration));
+}
+
+/** Routine items (custom routines or an edited plan day) → effective slots. */
+export function itemsToSlots(items: RoutineItem[], dayId: DayId, settings: Settings, calibration: boolean): EffectiveSlot[] {
+  return items
+    .filter((it) => EXERCISE_BY_ID[it.exerciseId])
+    .map((it, i) => {
+      const ex = EXERCISE_BY_ID[it.exerciseId];
+      return {
+        id: it.id,
+        dayId,
+        order: i + 1,
+        exerciseId: it.exerciseId,
+        sets: it.sets,
+        repsMin: it.repsMin,
+        repsMax: it.repsMax,
+        unit: it.unit,
+        perSide: it.perSide,
+        sideLabel: it.sideLabel,
+        plannedSets: it.sets,
+        todaySets: calibration ? calibrationSets(it.sets) : it.sets,
+        restSec: it.restSec ?? settings.restOverrides[it.exerciseId] ?? ex.restSec,
+        overridden: true,
+        group: it.group,
+      };
+    });
+}
+
+/** Current content of a plan day as editable routine items. */
+export function dayAsItems(dayId: DayId, settings: Settings): RoutineItem[] {
+  return effectiveDay(dayId, settings, false).map((s) => ({
+    id: s.id,
+    exerciseId: s.exerciseId,
+    sets: s.plannedSets,
+    repsMin: s.repsMin,
+    repsMax: s.repsMax,
+    unit: s.unit,
+    perSide: s.perSide,
+    sideLabel: s.sideLabel,
+    restSec: s.restSec,
+    group: s.group,
+  }));
 }
 
 /** Rough duration estimate in minutes: ~45 s per set + rest between sets + 2 min setup per exercise + 5 min warm-up. */
@@ -62,10 +108,10 @@ export function estimateMinutes(slots: EffectiveSlot[]): number {
 }
 
 export function formatPrescription(
-  s: { repsMin: number; repsMax: number; unit: 'reps' | 'sec'; sideLabel?: string },
+  s: { repsMin: number; repsMax: number; unit: 'reps' | 'sec' | 'min'; sideLabel?: string },
   sets: number,
 ): string {
-  const range = `${s.repsMin}–${s.repsMax}${s.unit === 'sec' ? ' s' : ''}`;
+  const range = `${s.repsMin}–${s.repsMax}${s.unit === 'sec' ? ' s' : s.unit === 'min' ? ' min' : ''}`;
   return `${sets} × ${range}${s.sideLabel ? ' ' + s.sideLabel : ''}`;
 }
 

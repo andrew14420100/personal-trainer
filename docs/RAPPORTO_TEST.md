@@ -1,3 +1,26 @@
+# Rapporto di verifica — FORMA LAB 4.1
+
+Data: 2026-11-03. Esiti:
+- `tsc` senza errori;
+- test unitari 70/70;
+- test end-to-end 179/179 (iPhone 14 Pro, iPhone SE, desktop).
+
+Dettagli in [NOVITA_4.1.md](NOVITA_4.1.md).
+
+**Corretti durante lo sviluppo:**
+- numero di serie largo 30 px, portato a 32;
+- filtri della libreria troppo bassi per il tocco;
+- due campi del Profilo senza nome accessibile;
+- due attese sbagliate nei test.
+
+**Non eseguibili qui:**
+- Safari reale;
+- riproduzione YouTube su iPhone dopo la correzione della policy;
+- importazione del file `.ics` nel Calendario;
+- foglio di condivisione dell'immagine.
+
+---
+
 # Rapporto di verifica — FORMA LAB 4.0
 
 Data: 2026-11-02 · build di produzione, Chromium (Playwright) con emulazione iPhone 14 Pro, iPhone SE e desktop 1280 px.

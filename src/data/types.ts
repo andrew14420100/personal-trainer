@@ -37,7 +37,8 @@ export interface Exercise {
   secondary: string[];
   equipment: string;
   category: 'multi-articolare' | 'mono-articolare' | 'core';
-  tracking: 'reps' | 'time';
+  /** reps; time = seconds hold; cardio = minutes + distance + kcal (4.1). */
+  tracking: 'reps' | 'time' | 'cardio';
   /** Load type: external load in kg, or body weight (load optional). */
   load: 'external' | 'bodyweight';
   /** Suggested minimum load step in kg when progressing. */
@@ -64,7 +65,7 @@ export interface Slot {
   sets: number;
   repsMin: number;
   repsMax: number;
-  unit: 'reps' | 'sec';
+  unit: 'reps' | 'sec' | 'min';
   perSide: boolean;
   /** Label for unilateral work, e.g. "per gamba" or "per lato". */
   sideLabel?: string;

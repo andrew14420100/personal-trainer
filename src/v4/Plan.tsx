@@ -1,4 +1,7 @@
-import { CheckCircle2, ChevronRight, Clock, Dumbbell, Layers, Play, PlayCircle, Timer } from 'lucide-react';
+import { Calculator, CheckCircle2, Folder, ChevronRight, Clock, Dumbbell, Layers, Library, Pencil, Play, PlayCircle, Plus, Timer } from 'lucide-react';
+import { allExercises } from '../data/catalog';
+import { FreeStartButton } from './Routines';
+import { sessionMeta } from '../lib/meta';
 import { useData } from '../app/store';
 import { DAYS, DAY_BY_ID } from '../data/program';
 import { EXERCISE_BY_ID } from '../data/exercises';
@@ -65,6 +68,78 @@ export function Plan() {
           );
         })}
       </div>
+
+      <Section title="Le mie schede" action={<button className="link" onClick={() => navigate('/routine/nuova')}>+ Nuova</button>}>
+        {settings.routines.length ? (
+          <div className="col" style={{ gap: 12 }}>
+            {[...new Set(settings.routines.map((r) => r.folder || ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b))).map((f) => (
+              <div key={f || '—'}>
+                {(f || settings.routines.some((r) => r.folder)) && (
+                  <div className="t-label row" style={{ marginBottom: 6, gap: 6 }}>
+                    <Folder size={13} /> {f || 'Senza cartella'}
+                  </div>
+                )}
+                <div className="list">
+                  {settings.routines
+                    .filter((r) => (r.folder || '') === f)
+                    .map((r) => (
+                      <button key={r.id} className="list-row" style={{ ['--day' as string]: r.accent }} onClick={() => navigate(`/routine/${r.id}`)}>
+                        <span className="dot" />
+                        <span className="grow">
+                          <span className="t-h3" style={{ display: 'block' }}>
+                            {r.name}
+                          </span>
+                          <span className="t-xs c3">
+                            {r.items.length} esercizi · {r.items.reduce((a, i) => a + i.sets, 0)} serie
+                          </span>
+                        </span>
+                        <ChevronRight size={18} className="c3" />
+                      </button>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <button className="card tap" onClick={() => navigate('/routine/nuova')}>
+            <div className="row">
+              <Plus size={20} className="c-accent" />
+              <span className="grow">
+                <span className="t-h3" style={{ display: 'block' }}>
+                  Crea una scheda personale
+                </span>
+                <span className="t-xs c3">Per giorni extra, in vacanza o per provare esercizi nuovi</span>
+              </span>
+            </div>
+          </button>
+        )}
+      </Section>
+
+      <Section title="Altro">
+        <div className="list">
+          <FreeStartButton />
+          <button className="list-row" onClick={() => navigate('/libreria')}>
+            <Library size={20} className="c2" />
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                Libreria esercizi
+              </span>
+              <span className="t-xs c3">{allExercises().length} esercizi, cerca per nome o muscolo, crea i tuoi</span>
+            </span>
+            <ChevronRight size={18} className="c3" />
+          </button>
+          <button className="list-row" onClick={() => navigate('/strumenti')}>
+            <Calculator size={20} className="c2" />
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                Strumenti
+              </span>
+              <span className="t-xs c3">Calcolatore dischi, massimale (1RM), percentuali</span>
+            </span>
+            <ChevronRight size={18} className="c3" />
+          </button>
+        </div>
+      </Section>
       <p className="t-xs c3 mt16">Foto: {[...new Set(DAYS.map((d) => photoCredit(d.photo)))].join(' · ')}</p>
     </main>
   );
@@ -152,7 +227,7 @@ export function DayView({ dayId }: { dayId: DayId }) {
       <div className="row mt12">
         {active ? (
           <button className="btn primary lg grow" onClick={() => navigate('/allenamento')}>
-            <PlayCircle size={20} /> {active.dayId === dayId ? 'Riprendi allenamento' : `In corso: ${DAY_BY_ID[active.dayId].name}`}
+            <PlayCircle size={20} /> {active.dayId === dayId ? 'Riprendi allenamento' : `In corso: ${sessionMeta(active, settings).name}`}
           </button>
         ) : (
           <button className="btn primary lg grow" onClick={begin}>
@@ -214,9 +289,14 @@ export function DayView({ dayId }: { dayId: DayId }) {
             );
           })}
         </div>
-        <p className="t-xs c3 mt8">
-          <Timer size={12} /> Recuperi e serie si modificano nel Profilo → Scheda.
-        </p>
+        <button className="btn block mt12" onClick={() => navigate(`/giorno/${dayId}/modifica`)}>
+          <Pencil size={16} /> Modifica esercizi, serie e recuperi
+        </button>
+        {settings.dayEdits[dayId] && (
+          <p className="t-xs c3 mt8">
+            <Timer size={12} /> Giorno personalizzato: puoi ripristinare l’originale da “Modifica”.
+          </p>
+        )}
       </Section>
     </main>
   );

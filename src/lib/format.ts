@@ -15,13 +15,27 @@ export function num(n: number, digits = 0): string {
   return n.toLocaleString('it-IT', { maximumFractionDigits: digits, minimumFractionDigits: 0 });
 }
 
+// Weight unit (4.1): data is ALWAYS stored in kg; only display and input are converted.
+export const LB = 2.20462;
+let UNIT: 'kg' | 'lb' = 'kg';
+export const setWeightUnit = (u: 'kg' | 'lb') => (UNIT = u);
+export const unitLabel = () => UNIT;
+/** kg → value in the display unit. */
+export const toUnit = (kgVal: number) => (UNIT === 'lb' ? Math.round(kgVal * LB * 10) / 10 : kgVal);
+/** value typed in the display unit → kg (stored). */
+export const fromUnit = (v: number) => (UNIT === 'lb' ? Math.round((v / LB) * 1000) / 1000 : v);
+
 export function kg(n: number | null | undefined): string {
   if (n == null) return '—';
-  return `${num(n, 2)} kg`;
+  return `${num(toUnit(n), UNIT === 'lb' ? 1 : 2)} ${UNIT}`;
 }
 
 /** Compact volume, e.g. 12.450 kg → "12,5 t". */
 export function volume(n: number): string {
+  if (UNIT === 'lb') {
+    const v = n * LB;
+    return v >= 10000 ? `${num(v / 1000, 1)}k lb` : `${num(Math.round(v))} lb`;
+  }
   if (n >= 10000) return `${num(n / 1000, 1)} t`;
   return `${num(Math.round(n))} kg`;
 }

@@ -14,7 +14,16 @@ export interface SetLog {
   reps: number | null;
   done: boolean;
   completedAt?: number;
+  /** Set type (4.1): undefined = normal work set. Warm-up sets are excluded from statistics. */
+  type?: SetType;
+  /** Optional RPE of the single set (6–10). */
+  rpe?: number | null;
+  /** Cardio (4.1): distance in km and calories read from the machine. reps = minutes. */
+  distanceKm?: number | null;
+  kcal?: number | null;
 }
+
+export type SetType = 'warmup' | 'drop' | 'failure';
 
 export type Technique = 'buona' | 'discreta' | 'da migliorare';
 
@@ -24,18 +33,25 @@ export interface ExerciseLog {
   targetSets: number;
   repsMin: number;
   repsMax: number;
-  unit: 'reps' | 'sec';
+  unit: 'reps' | 'sec' | 'min';
   perSide: boolean;
   sets: SetLog[];
   note: string;
   technique?: Technique;
   /** Reps in reserve declared on the last set (0 = failure). */
   rir?: number | null;
+  /** Superset group letter (4.1): consecutive exercises with the same letter alternate. */
+  group?: string;
+  /** Rest for this exercise in this session (s), overrides the default. */
+  restSec?: number;
 }
 
 export interface Session {
   id: string;
-  dayId: DayId;
+  /** Plan day ('upper-a'…), custom routine ('r:<id>') or free workout ('free'). */
+  dayId: DayId | `r:${string}` | 'free';
+  /** Name shown for custom routines / free workouts (stored at start, survives routine deletion). */
+  title?: string;
   startedAt: number;
   endedAt?: number;
   status: 'active' | 'completed';
@@ -59,6 +75,8 @@ export interface Measurement {
   arm?: number | null;
   thigh?: number | null;
   hips?: number | null;
+  /** Body fat % if known (4.1). */
+  bodyFat?: number | null;
   note?: string;
 }
 
@@ -295,7 +313,7 @@ export interface Marker {
 export interface MediaItem {
   id: string; // `${exerciseId}:${kind}`
   exerciseId: string;
-  kind: 'quick' | 'errors';
+  kind: 'quick' | 'errors' | 'photo';
   blob: Blob;
   type: string;
   createdAt: number;

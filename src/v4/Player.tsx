@@ -60,6 +60,7 @@ export function Player({ youtubeId, title, autoPlay, compact = false }: { youtub
   const [full, setFull] = useState(false);
   // the iframe lives in a different DOM node in full screen: re-create it when toggling
   const [nonce, setNonce] = useState(0);
+  const [errCode, setErrCode] = useState<number | null>(null);
 
   useEffect(() => {
     setSt(autoPlay ? 'loading' : 'idle');
@@ -80,15 +81,21 @@ export function Player({ youtubeId, title, autoPlay, compact = false }: { youtub
     loadApi()
       .then((YT) => {
         if (dead || !host.current) return;
-        const el = document.createElement('div');
+        // Build the iframe ourselves so it always carries a referrer policy YouTube accepts
+        // (embeds without a referrer fail with error 153), then attach the official API to it.
+        const params = new URLSearchParams({
+          enablejsapi: '1', controls: '0', playsinline: '1', mute: '1', autoplay: '1', loop: '1', playlist: youtubeId,
+          rel: '0', iv_load_policy: '3', disablekb: '1', fs: '0', modestbranding: '1', origin: location.origin,
+        });
+        const el = document.createElement('iframe');
         el.className = 'yt';
+        el.title = title;
+        el.src = `https://www.youtube-nocookie.com/embed/${youtubeId}?${params}`;
+        el.allow = 'autoplay; encrypted-media; picture-in-picture';
+        el.referrerPolicy = 'strict-origin-when-cross-origin';
+        el.setAttribute('playsinline', '');
         host.current.replaceChildren(el);
         p.current = new YT.Player(el, {
-          host: 'https://www.youtube-nocookie.com',
-          videoId: youtubeId,
-          width: '100%',
-          height: '100%',
-          playerVars: { controls: 0, playsinline: 1, mute: 1, autoplay: 1, loop: 1, playlist: youtubeId, rel: 0, iv_load_policy: 3, disablekb: 1, fs: 0, origin: location.origin },
           events: {
             onReady: (e: { target: YTP }) => {
               if (dead) return;
@@ -105,8 +112,9 @@ export function Player({ youtubeId, title, autoPlay, compact = false }: { youtub
                 e.target.playVideo();
               }
             },
-            onError: () => {
+            onError: (e: { data: number }) => {
               clearTimeout(to);
+              setErrCode(e.data);
               setSt('error');
             },
           },
@@ -140,7 +148,7 @@ export function Player({ youtubeId, title, autoPlay, compact = false }: { youtub
         <div className="vmsg" role="alert">
           {st === 'offline' ? <WifiOff size={24} /> : <AlertTriangle size={24} color="var(--warn)" />}
           <div>
-            <b style={{ color: 'var(--t1)' }}>{st === 'offline' ? 'Sei offline' : st === 'error' ? 'Il video non può essere riprodotto qui' : 'Il player non si è caricato'}</b>
+            <b style={{ color: 'var(--t1)' }}>{st === 'offline' ? 'Sei offline' : st === 'error' ? `Il video non può essere riprodotto qui${errCode ? ` (errore YouTube ${errCode})` : ''}` : 'Il player non si è caricato'}</b>
             <div className="t-sm" style={{ marginTop: 4 }}>
               {st === 'offline' ? 'I video richiedono la connessione. La guida tecnica resta disponibile qui sotto.' : 'Puoi guardarlo sulla fonte originale.'}
             </div>

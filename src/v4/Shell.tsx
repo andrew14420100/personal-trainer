@@ -11,7 +11,7 @@ const TABS = [
   { path: 'progressi', label: 'Progressi', icon: LineChart },
   { path: 'profilo', label: 'Profilo', icon: User },
 ];
-const PARENT: Record<string, string> = { giorno: 'allenamenti', esercizio: 'allenamenti', sessione: 'progressi' };
+const PARENT: Record<string, string> = { giorno: 'allenamenti', esercizio: 'allenamenti', routine: 'allenamenti', libreria: 'allenamenti', strumenti: 'allenamenti', sessione: 'progressi', videoteca: 'profilo' };
 
 export function TabBar() {
   const { path } = useRoute();

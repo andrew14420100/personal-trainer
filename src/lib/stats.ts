@@ -1,11 +1,12 @@
 // Pure statistics computed ONLY from sessions recorded by the user. No demo data.
 import type { ExerciseLog, Session, SetLog } from './db';
 
-export const doneSets = (log: ExerciseLog): SetLog[] => log.sets.filter((s) => s.done && s.reps != null && s.reps > 0);
+/** Completed WORK sets (warm-up sets are logged but excluded from every statistic). */
+export const doneSets = (log: ExerciseLog): SetLog[] => log.sets.filter((s) => s.done && s.reps != null && s.reps > 0 && s.type !== 'warmup');
 
 /** Volume load (kg × reps) for one exercise log. Time-based or unloaded sets count 0. */
 export function logVolume(log: ExerciseLog): number {
-  if (log.unit === 'sec') return 0;
+  if (log.unit !== 'reps') return 0;
   const sides = log.perSide ? 2 : 1;
   return doneSets(log).reduce((sum, s) => sum + (s.weight ?? 0) * (s.reps ?? 0) * sides, 0);
 }
@@ -19,7 +20,7 @@ export function sessionSets(s: Session): number {
 }
 
 export function sessionReps(s: Session): number {
-  return s.exercises.reduce((sum, l) => (l.unit === 'sec' ? sum : sum + doneSets(l).reduce((a, x) => a + (x.reps ?? 0) * (l.perSide ? 2 : 1), 0)), 0);
+  return s.exercises.reduce((sum, l) => (l.unit !== 'reps' ? sum : sum + doneSets(l).reduce((a, x) => a + (x.reps ?? 0) * (l.perSide ? 2 : 1), 0)), 0);
 }
 
 export function sessionDurationMin(s: Session): number {
