@@ -7,10 +7,11 @@ import { EXERCISE_BY_ID } from '../data/exercises';
 import { EXERCISE_MUSCLES, MUSCLE_LABEL, MUSCLE_REGION, type MuscleId } from '../data/muscles';
 import { kvSet } from '../lib/db';
 import { loadSettings, saveSettings, updateSettings, type Settings } from '../lib/settings';
-import { buildDraft, commitDraft, diffPrograms, draftProblems, exportProgram, findDuplicate, GOALS, IMPORT_FOLDER, MAX_BYTES, parseText, validateExchange, type Draft, type DraftItem, type Issue } from '../lib/exchange';
+import { buildDraft, diffPrograms, draftProblems, exportProgram, findDuplicate, GOALS, IMPORT_FOLDER, MAX_BYTES, parseText, validateExchange, type Draft, type DraftItem, type Issue } from '../lib/exchange';
 import { navigate } from '../lib/router';
 import { NavBar, Notice, Section, Seg, toast } from './kit';
 import { ExercisePicker } from './Routines';
+import { allSchede, applyImport, defaultName, NONE, type ImportAction } from '../lib/library';
 
 export const CHATGPT_PROMPT = `Crea il programma di allenamento nel formato "FORMA LAB Workout Exchange — versione 1".
 Rispondi SOLO con un blocco JSON valido, senza testo prima o dopo, rispettando queste regole:
@@ -167,7 +168,11 @@ const MUSCLES = Object.keys(MUSCLE_LABEL) as MuscleId[];
 
 function Preview({ draft, setDraft, mode, setMode, busy, setBusy, settings }: { draft: Draft; setDraft: (d: Draft | null) => void; mode: Mode; setMode: (m: Mode) => void; busy: boolean; setBusy: (b: boolean) => void; settings: Settings }) {
   const [pick, setPick] = useState<string | null>(null);
+  const [action, setAction] = useState<ImportAction>('add');
+  const [sure, setSure] = useState(false);
   const dup = findDuplicate(draft, settings);
+  const all = allSchede(settings);
+  const destructive = action === 'replace-default' || action === 'replace-all';
   const problems = draftProblems(draft);
   const p = draft.file.program;
   const set = (key: string, patch: Partial<DraftItem>) => setDraft({ ...draft, days: draft.days.map((d) => ({ ...d, items: d.items.map((it) => (it.key === key ? { ...it, ...patch } : it)) })) });
@@ -189,11 +194,10 @@ function Preview({ draft, setDraft, mode, setMode, busy, setBusy, settings }: { 
       const current = await loadSettings();
       // safety copy of the plan before an important change (restorable from the toast)
       await kvSet('backup:pre-import', { at: new Date().toISOString(), settings: current });
-      const next = commitDraft(draft, current, mode === 'update' && dup ? { replace: dup.id } : 'new');
-      await saveSettings(next); // single write: the import is applied entirely or not at all
-      const prog = mode === 'update' && dup ? next.programs.find((x) => x.id === dup.id)! : next.programs[next.programs.length - 1];
-      navigate(`/programma/${prog.id}`, { replace: true });
-      toast(mode === 'update' ? 'Programma aggiornato' : 'Programma importato', {
+      const { settings: next, programId } = applyImport(draft, current, action, mode === 'update' && dup ? { replace: dup.id } : 'new');
+      await saveSettings(next); // single write: the import (and any replacement) is applied entirely or not at all
+      navigate(`/programma/${programId}`, { replace: true });
+      toast(`${mode === 'update' ? 'Programma aggiornato' : 'Programma importato'}${action === 'add' ? '' : ' e reso predefinito'}`, {
         label: 'Annulla',
         run: () => void updateSettings(() => current).then(() => (navigate('/allenamenti', { replace: true }), toast('Importazione annullata'))),
       });
@@ -320,14 +324,41 @@ function Preview({ draft, setDraft, mode, setMode, busy, setBusy, settings }: { 
           </Notice>
         </div>
       )}
-      <button className="btn primary lg block mt16" disabled={busy || problems.length > 0} onClick={confirm}>
-        <CheckCircle2 size={18} /> Conferma e importa programma
+      <div className="card mt12 col" role="radiogroup" aria-label="Come importare">
+        <div className="t-h3">Come importarlo?</div>
+        <div className="t-xs c3">Predefinito attuale: {defaultName(settings)}</div>
+        {(
+          [
+            ['add', 'Aggiungi', 'Lo aggiunge alle tue schede. Il programma predefinito non cambia.'],
+            ['add-default', 'Aggiungi e rendi predefinita', 'Home, Agenda, Calendario e “Inizia oggi” useranno solo questo programma. Le altre schede restano.'],
+            ['replace-default', 'Sostituisci predefinita', settings.activeProgramId === NONE ? 'Non c’è un predefinito da sostituire: diventa semplicemente predefinito.' : `Elimina “${defaultName(settings)}” e mette questo al suo posto.`],
+            ['replace-all', 'Sostituisci tutte le schede', `Elimina ${all.programs.length} programmi, ${all.routines.length} schede personali${all.original ? ' e la scheda originale' : ''}; resta solo questo.`],
+          ] as [ImportAction, string, string][]
+        ).map(([v, l, d]) => (
+          <button key={v} type="button" role="radio" aria-checked={action === v} className={`list-row${action === v ? ' on' : ''}`} style={{ alignItems: 'flex-start', borderRadius: 12, outline: action === v ? '2px solid var(--accent)' : undefined }} onClick={() => (setAction(v), setSure(false))}>
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                {l}
+              </span>
+              <span className="t-xs c3">{d}</span>
+            </span>
+          </button>
+        ))}
+        {destructive && (
+          <label className="row t-sm" style={{ gap: 8, alignItems: 'flex-start' }}>
+            <input type="checkbox" checked={sure} onChange={(e) => setSure(e.target.checked)} aria-label="Confermo la sostituzione" style={{ marginTop: 3 }} />
+            <span>Confermo: le schede indicate verranno eliminate. Storico, carichi, misure e foto restano; subito dopo potrò annullare.</span>
+          </label>
+        )}
+      </div>
+      <button className="btn primary lg block mt16" disabled={busy || problems.length > 0 || (destructive && !sure)} onClick={confirm}>
+        <CheckCircle2 size={18} /> {action === 'add' ? 'Conferma e importa programma' : action === 'add-default' ? 'Importa e rendi predefinito' : 'Importa e sostituisci'}
       </button>
       <button className="btn ghost block mt8" onClick={() => setDraft(null)}>
         Annulla
       </button>
       <p className="t-xs c3 mt8">
-        Verrà salvato nella cartella “{IMPORT_FOLDER}”. La tua scheda originale e lo storico non vengono modificati. Prima di salvare viene fatta una copia di sicurezza; dopo l’importazione puoi annullare.
+        Verrà salvato nella cartella “{IMPORT_FOLDER}”. Lo storico non viene mai modificato. Prima di salvare viene fatta una copia di sicurezza; dopo l’importazione puoi annullare.
       </p>
       <ExercisePicker
         open={pick != null}

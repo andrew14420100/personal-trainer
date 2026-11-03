@@ -8,7 +8,7 @@ import { useData } from '../app/store';
 export const TAB_DEFS: Record<string, { label: string; icon: typeof Home; to: string; match: string[] }> = {
   '': { label: 'Oggi', icon: Home, to: '/', match: [''] },
   agenda: { label: 'Agenda', icon: CalendarDays, to: '/agenda', match: ['agenda', 'calendario'] },
-  allenati: { label: 'Allenati', icon: Dumbbell, to: '/allenamenti', match: ['allenamenti', 'giorno', 'esercizio', 'routine', 'strumenti', 'importa', 'programma'] },
+  allenati: { label: 'Allenati', icon: Dumbbell, to: '/allenamenti', match: ['allenamenti', 'giorno', 'esercizio', 'routine', 'strumenti', 'importa', 'programma', 'schede'] },
   progressi: { label: 'Progressi', icon: LineChart, to: '/progressi', match: ['progressi', 'sessione'] },
   altro: { label: 'Altro', icon: LayoutGrid, to: '/altro', match: ['altro', 'profilo', 'videoteca'] },
   libreria: { label: 'Esercizi', icon: Library, to: '/libreria', match: ['libreria'] },

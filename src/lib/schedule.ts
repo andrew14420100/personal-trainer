@@ -1,7 +1,7 @@
 // Weekly schedule: Monday-based weeks, planned days from the program, user moves (reschedule),
 // and the real status of each date computed from the recorded sessions.
-import { DAYS, DAY_BY_ID } from '../data/program';
-import type { Day, DayId } from '../data/types';
+import { DAYS } from '../data/program';
+import type { PlanDay } from './library';
 import type { Session } from './db';
 
 /** Local date → 'yyyy-mm-dd'. */
@@ -33,24 +33,35 @@ export type DayState = 'done' | 'planned' | 'today' | 'skipped' | 'rest';
 export interface DateInfo {
   date: string;
   /** Workout planned on this date (after moves), if any. */
-  plan?: Day;
+  plan?: PlanDay;
   /** True when the plan comes from another date (rescheduled here). */
   movedIn?: boolean;
   /** Original planned workout that was moved away from this date. */
-  movedOut?: { day: Day; to: string };
+  movedOut?: { day: PlanDay; to: string };
   sessions: Session[];
   state: DayState;
 }
 
-function basePlan(date: Date): Day | undefined {
-  return DAYS.find((d) => d.weekday === date.getDay());
+// The calendar follows the DEFAULT program (set by the store on every load; the original plan by
+// default, which keeps older data and tests working). Before `since` no plan is shown.
+let PLAN: PlanDay[] = DAYS;
+let SINCE = '';
+export function setPlanSchedule(days: PlanDay[], since: string) {
+  PLAN = days;
+  SINCE = since;
+}
+export const currentPlanDays = () => PLAN;
+
+function basePlan(date: Date): PlanDay | undefined {
+  if (SINCE && iso(date) < SINCE) return undefined;
+  return PLAN.find((d) => d.weekday === date.getDay());
 }
 
 /** Planned workout for a date, taking moves into account. */
-export function planFor(dateIso: string, moves: Moves): { plan?: Day; movedIn?: boolean; movedOut?: { day: Day; to: string } } {
+export function planFor(dateIso: string, moves: Moves): { plan?: PlanDay; movedIn?: boolean; movedOut?: { day: PlanDay; to: string } } {
   const base = basePlan(parseIso(dateIso));
-  let plan: Day | undefined;
-  let movedOut: { day: Day; to: string } | undefined;
+  let plan: PlanDay | undefined;
+  let movedOut: { day: PlanDay; to: string } | undefined;
   if (base) {
     if (dateIso in moves && moves[dateIso] !== dateIso) movedOut = { day: base, to: moves[dateIso] };
     else plan = base;
@@ -86,7 +97,7 @@ export function todayPlan(sessions: Session[], moves: Moves, now = new Date()): 
 }
 
 /** Next date (after today) with a planned workout. */
-export function nextPlanned(moves: Moves, now = new Date()): { date: string; day: Day } | null {
+export function nextPlanned(moves: Moves, now = new Date()): { date: string; day: PlanDay } | null {
   for (let i = 1; i <= 21; i++) {
     const d = iso(addDays(now, i));
     const p = planFor(d, moves).plan;
@@ -106,8 +117,8 @@ export function monthGrid(year: number, month: number): (Date | null)[] {
   return cells;
 }
 
-export function dayById(id: DayId): Day {
-  return DAY_BY_ID[id];
+export function dayById(id: string): PlanDay | undefined {
+  return PLAN.find((d) => d.id === id);
 }
 
 // ── 5.0: automatic rescheduling of missed workouts ────────────────────────────

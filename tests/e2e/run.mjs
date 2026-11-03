@@ -587,7 +587,9 @@ async function run(deviceName, label, full) {
     const st1 = await kv(page, 'settings');
     check(`[${label}] import: saved in the ChatGPT folder`, st1.programs.length === 1 && st1.routines.filter((r) => r.folder === 'Schede create con ChatGPT').length === 4);
     check(`[${label}] import: history untouched`, (await countSessions()) === sessionsBefore);
-    await page.getByRole('button', { name: 'Attiva come programma corrente' }).click();
+    await page.getByRole('button', { name: 'Rendi predefinito' }).click();
+    check(`[${label}] default: week preview before confirming`, (await page.getByRole('dialog').getByText('Riposo').count()) >= 1);
+    await page.getByRole('dialog').getByRole('button', { name: 'Conferma' }).click();
     await page.waitForSelector('text=Settimana 1 di 8');
     check(`[${label}] import: program activated (week 1, phase)`, (await page.getByText(/Settimana 1 di 8 · Accumulo/).count()) === 1);
     await layoutChecks(page, `${label} program view`);
@@ -636,6 +638,96 @@ async function run(deviceName, label, full) {
     await wait(500);
     check(`[${label}] import: undo removes the last import`, (await kv(page, 'settings')).programs.length === 1);
     check(`[${label}] import: history still untouched`, (await countSessions()) === sessionsBefore);
+    // ── Default program management (PR #5): the user's 8-week Upper/Lower plan ──
+    const planIds = (sel) => page.locator(sel).evaluateAll((els) => els.map((e) => e.getAttribute('data-plan')).filter(Boolean));
+    await page.goto(BASE + '/#/importa');
+    await page.setInputFiles('#import-program-file', join(root, 'public/formats/chatgpt-ripartenza-8-settimane.json'));
+    await page.waitForSelector('#anteprima');
+    check(`[${label}] PR5: user file previewed`, (await page.getByLabel('Nome del programma').inputValue()).startsWith('Ripartenza intelligente'));
+    check(`[${label}] PR5: every exercise recognized`, (await page.getByText(/16\/16 esercizi riconosciuti|(\d+)\/\1 esercizi riconosciuti/).count()) === 1, await page.locator('#anteprima .section-head').innerText());
+    const amb2 = page.locator('select[aria-label^="Scegli l’esercizio per"]');
+    while (await amb2.count()) await amb2.first().selectOption({ index: 1 });
+    for (const o of ['Aggiungi', 'Aggiungi e rendi predefinita', 'Sostituisci predefinita', 'Sostituisci tutte le schede']) check(`[${label}] PR5: import option "${o}"`, (await page.getByRole('radio', { name: new RegExp('^' + o + '(?! e rendi)') }).count()) === 1);
+    await page.getByRole('radio', { name: /^Sostituisci tutte le schede/ }).click();
+    check(`[${label}] PR5: replacing everything needs explicit confirmation`, await page.getByRole('button', { name: 'Importa e sostituisci' }).isDisabled());
+    await page.getByRole('radio', { name: /^Aggiungi e rendi predefinita/ }).click();
+    await page.screenshot({ path: join(shots, `${label}-pr5-import.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Importa e rendi predefinito' }).click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    const st5 = await kv(page, 'settings');
+    const ripId = st5.programs.find((x) => x.name.startsWith('Ripartenza'))?.id;
+    check(`[${label}] PR5: imported program is the default`, !!ripId && st5.activeProgramId === ripId);
+    await page.reload();
+    await page.goto(BASE + '/#/');
+    await page.waitForSelector('.hero');
+    const ripRoutines = (await kv(page, 'settings')).programs.find((x) => x.id === ripId).days.map((d) => `r:${d.routineId}`);
+    check(`[${label}] PR5: Home uses only the default program (after restart)`, ripRoutines.includes(await page.locator('.hero').getAttribute('data-plan')));
+    await page.goto(BASE + '/#/calendario');
+    await page.getByRole('tab', { name: 'Mese' }).click();
+    let cal = await planIds('.mcell[data-plan]');
+    if (!cal.length) { await page.getByRole('button', { name: 'Mese successivo' }).click(); cal = await planIds('.mcell[data-plan]'); }
+    check(`[${label}] PR5: Calendar uses only the default program`, cal.length > 0 && cal.every((x) => ripRoutines.includes(x)), JSON.stringify(cal.slice(0, 4)));
+    await page.goto(BASE + '/#/agenda');
+    let ag = [];
+    for (let i = 0; i < 7 && !ag.length; i++) { ag = await planIds('[data-plan]'); if (!ag.length) await page.getByRole('button', { name: 'Giorno successivo' }).click(); }
+    check(`[${label}] PR5: Agenda uses only the default program`, ag.length > 0 && ag.every((x) => ripRoutines.includes(x)), JSON.stringify(ag));
+    // manage page: delete the original → never comes back
+    await page.goto(BASE + '/#/allenamenti');
+    await page.getByRole('button', { name: 'Gestisci schede' }).click();
+    await page.waitForSelector('text=Predefinito:');
+    await layoutChecks(page, `${label} manage`);
+    await wait(700);
+    await page.screenshot({ path: join(shots, `${label}-pr5-manage.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Elimina Scheda FORMA LAB (4 giorni)' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Elimina', exact: true }).click();
+    await wait(400);
+    await page.reload();
+    await page.goto(BASE + '/#/allenamenti');
+    await page.waitForSelector('text=Programma predefinito');
+    check(`[${label}] PR5: original deleted and not back after restart`, (await page.locator('.plan-card').count()) === 0 && (await page.getByText('Ripristina modello originale').count()) === 1 && (await kv(page, 'settings')).originalHidden === true);
+    // archive + restore with multi-select
+    await page.goto(BASE + '/#/schede');
+    await page.getByRole('button', { name: 'Seleziona tutte' }).click();
+    await page.getByRole('button', { name: 'Archivia' }).click();
+    await wait(400);
+    const arch = await kv(page, 'settings');
+    check(`[${label}] PR5: bulk archive (default becomes none)`, arch.programs.every((x) => x.archived) && arch.activeProgramId === 'none');
+    await page.getByRole('tab', { name: 'Archiviate' }).click();
+    await page.getByRole('button', { name: 'Seleziona tutte' }).click();
+    await page.getByRole('button', { name: 'Ripristina', exact: true }).click();
+    await wait(400);
+    check(`[${label}] PR5: bulk restore`, (await kv(page, 'settings')).programs.every((x) => !x.archived));
+    await page.getByRole('tab', { name: 'Tutte' }).click();
+    // Elimina tutte with double confirmation
+    const sessBeforeWipe = await countSessions();
+    await page.getByRole('button', { name: 'Elimina tutte le schede' }).click();
+    check(`[${label}] PR5: mass delete shows counts`, (await page.getByRole('dialog').getByText(/programmi, \d+ schede personali/).count()) === 1);
+    await page.getByRole('dialog').getByRole('button', { name: 'Continua' }).click();
+    const finalDel = page.getByRole('dialog').getByRole('button', { name: 'Elimina definitivamente' });
+    check(`[${label}] PR5: second confirmation required (ELIMINA)`, await finalDel.isDisabled());
+    await page.getByLabel('Scrivi ELIMINA per confermare').fill('ELIMINA');
+    await finalDel.click();
+    await wait(500);
+    const empty = await kv(page, 'settings');
+    check(`[${label}] PR5: all schede deleted`, empty.programs.length === 0 && empty.routines.length === 0 && empty.activeProgramId === 'none' && empty.originalHidden === true);
+    check(`[${label}] PR5: history not deleted`, (await countSessions()) === sessBeforeWipe);
+    await page.reload();
+    await page.goto(BASE + '/#/');
+    await page.getByText('Nessuna scheda attiva').waitFor({ timeout: 4000 }).catch(() => {});
+    check(`[${label}] PR5: empty Home "Nessuna scheda attiva" after restart`, await page.getByText('Nessuna scheda attiva').isVisible());
+    await page.screenshot({ path: join(shots, `${label}-pr5-empty.png`), fullPage: true });
+    await layoutChecks(page, `${label} empty home`);
+    // import after "Elimina tutte"
+    await page.getByRole('button', { name: 'Importa scheda' }).first().click();
+    await page.setInputFiles('#import-program-file', join(root, 'public/formats/chatgpt-ripartenza-8-settimane.json'));
+    await page.waitForSelector('#anteprima');
+    while (await amb2.count()) await amb2.first().selectOption({ index: 1 });
+    await page.getByRole('radio', { name: /^Aggiungi e rendi predefinita/ }).click();
+    await page.getByRole('button', { name: 'Importa e rendi predefinito' }).click();
+    await page.waitForFunction(() => location.hash.startsWith('#/programma/'));
+    await page.goto(BASE + '/#/');
+    await page.waitForSelector('.hero');
+    check(`[${label}] PR5: import after "Elimina tutte" restores a working Home`, (await page.locator('.hero').getAttribute('data-plan'))?.startsWith('r:'));
     // deletion needs two confirmations (last step of this device run)
     await page.goto(BASE + '/#/profilo');
     await page.getByRole('button', { name: /Cancella tutti i dati/ }).first().click();

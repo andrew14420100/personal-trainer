@@ -3,13 +3,13 @@ import { useMemo, useState } from 'react';
 import { Archive, ArchiveRestore, ArrowLeftRight, ChevronRight, Copy, Download, FileUp, Pencil, Play, Star, Trash2, Undo2 } from 'lucide-react';
 import { useData, useSettingsUpdater } from '../app/store';
 import { EXERCISE_BY_ID } from '../data/exercises';
-import { uid } from '../lib/db';
 import { deliverFile } from '../lib/backup';
 import { currentWeek, diffPrograms, exportOriginalPlan, exportProgram, phaseOf, setsForWeek, type ExFile } from '../lib/exchange';
 import { itemsToSlots, formatPrescription } from '../lib/plan';
 import { startCustom } from '../lib/workout';
 import { navigate } from '../lib/router';
-import type { Program, Settings } from '../lib/settings';
+import type { Program } from '../lib/settings';
+import { blockingSession, defaultName, deleteSchede, duplicateProgram, planDaysFor, previousDefault, setArchived, setDefault } from '../lib/library';
 import { Confirm, Empty, NavBar, Notice, Section, Sheet, toast } from './kit';
 
 const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'scheda';
@@ -25,7 +25,6 @@ export function ProgramsSection() {
   const { settings } = useData();
   const [showArchived, setShowArchived] = useState(false);
   const list = settings.programs.filter((p) => showArchived || !p.archived);
-  const active = settings.programs.find((p) => p.id === settings.activeProgramId);
   return (
     <Section title="Programmi" action={settings.programs.some((p) => p.archived) ? <button className="link" onClick={() => setShowArchived(!showArchived)}>{showArchived ? 'Nascondi archiviati' : 'Archiviati'}</button> : undefined}>
       <div className="row" style={{ gap: 8 }}>
@@ -37,7 +36,7 @@ export function ProgramsSection() {
         </button>
       </div>
       <p className="t-xs c3 mt8" style={{ marginBottom: 0 }}>
-        Programma corrente: <b>{active ? active.name : 'Scheda FORMA LAB (4 giorni)'}</b>. Il pulsante ↓ esporta la scheda originale per ChatGPT.
+        Programma predefinito: <b>{defaultName(settings)}</b>. Il pulsante ↓ esporta la scheda originale per ChatGPT.
       </p>
       {list.length > 0 && (
         <div className="list mt8">
@@ -63,31 +62,6 @@ export function ProgramsSection() {
   );
 }
 
-function removeProgram(s: Settings, id: string): Settings {
-  const p = s.programs.find((x) => x.id === id);
-  if (!p) return s;
-  const rids = new Set(p.days.map((d) => d.routineId));
-  return {
-    ...s,
-    programs: s.programs.filter((x) => x.id !== id),
-    routines: s.routines.filter((r) => !rids.has(r.id)),
-    activeProgramId: s.activeProgramId === id ? '' : s.activeProgramId,
-    previousProgramIds: s.previousProgramIds.filter((x) => x !== id),
-  };
-}
-
-function duplicateProgram(s: Settings, id: string): Settings {
-  const p = s.programs.find((x) => x.id === id)!;
-  const now = Date.now();
-  const days = p.days.map((d) => {
-    const r = s.routines.find((x) => x.id === d.routineId)!;
-    return { day: { ...d, routineId: uid() }, routine: r };
-  });
-  const routines = days.map(({ day, routine }) => ({ ...structuredClone(routine), id: day.routineId, items: routine.items.map((i) => ({ ...i, id: uid() })), createdAt: now }));
-  const copy: Program = { ...structuredClone(p), id: uid(), name: `${p.name} (copia)`.slice(0, 80), days: days.map((x) => x.day), createdAt: now, updatedAt: now, activatedAt: undefined, archived: false, sourceKey: `${p.sourceKey}-copia-${now}` };
-  return { ...s, programs: [...s.programs, copy], routines: [...s.routines, ...routines] };
-}
-
 export function ProgramView({ id }: { id: string }) {
   const { settings, sessions, active } = useData();
   const update = useSettingsUpdater();
@@ -96,6 +70,7 @@ export function ProgramView({ id }: { id: string }) {
   const [name, setName] = useState(p?.name ?? '');
   const [del, setDel] = useState(false);
   const [cmp, setCmp] = useState(false);
+  const [activate, setActivate] = useState(false);
   if (!p)
     return (
       <main className="page">
@@ -148,12 +123,12 @@ export function ProgramView({ id }: { id: string }) {
 
       <div className="row wrap mt12" style={{ gap: 6 }}>
         {isActive ? (
-          <button className="btn sm" onClick={() => update((s) => ({ ...s, activeProgramId: s.previousProgramIds[0] && s.programs.some((x) => x.id === s.previousProgramIds[0]) ? s.previousProgramIds[0] : '', previousProgramIds: s.previousProgramIds.slice(1) })).then(() => toast('Tornato al programma precedente'))}>
-            <Undo2 size={14} /> Torna al precedente
+          <button className="btn sm" onClick={() => update((s) => setDefault(s, previousDefault(s))).then(() => toast('Programma predefinito cambiato'))}>
+            <Undo2 size={14} /> Torna al precedente ({previousDefault(settings) === 'none' ? 'nessuno' : previousDefault(settings) === 'original' ? 'scheda originale' : settings.programs.find((x) => x.id === previousDefault(settings))?.name})
           </button>
         ) : (
-          <button className="btn sm primary" onClick={() => update((s) => ({ ...s, activeProgramId: p.id, previousProgramIds: [s.activeProgramId, ...s.previousProgramIds.filter((x) => x !== s.activeProgramId)].filter((x) => x !== p.id).slice(0, 10), programs: s.programs.map((x) => (x.id === p.id ? { ...x, activatedAt: Date.now() } : x)) })).then(() => toast('Programma corrente attivato'))}>
-            <Star size={14} /> Attiva come programma corrente
+          <button className="btn sm primary" onClick={() => setActivate(true)}>
+            <Star size={14} /> Rendi predefinito
           </button>
         )}
         <button className="btn sm" onClick={() => downloadExchange(exportProgram(p, settings))}>
@@ -165,7 +140,7 @@ export function ProgramView({ id }: { id: string }) {
         <button className="btn sm ghost" onClick={() => update((s) => duplicateProgram(s, p.id)).then(() => toast('Programma duplicato'))}>
           <Copy size={14} /> Duplica
         </button>
-        <button className="btn sm ghost" onClick={() => update((s) => ({ ...s, programs: s.programs.map((x) => (x.id === p.id ? { ...x, archived: !x.archived } : x)) }))}>
+        <button className="btn sm ghost" onClick={() => update((s) => setArchived(s, { programs: [p.id] }, !p.archived))}>
           {p.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />} {p.archived ? 'Ripristina' : 'Archivia'}
         </button>
         <button className="btn sm ghost" style={{ color: 'var(--bad)' }} onClick={() => setDel(true)}>
@@ -261,9 +236,13 @@ export function ProgramView({ id }: { id: string }) {
         body="Vengono eliminate le sue giornate. Le sedute già registrate restano nello storico."
         confirmLabel="Elimina programma"
         danger
-        onConfirm={() => update((s) => removeProgram(s, p.id)).then(() => navigate('/allenamenti', { replace: true }))}
+        onConfirm={() => {
+          if (blockingSession(active, settings, { programs: [p.id] })) return toast('Concludi o elimina prima l’allenamento in corso di questo programma');
+          void update((s) => deleteSchede(s, { programs: [p.id] })).then(() => (navigate('/allenamenti', { replace: true }), toast(isActive ? 'Programma eliminato: nessun programma predefinito ora attivo' : 'Programma eliminato')));
+        }}
       />
       <CompareSheet open={cmp} onClose={() => setCmp(false)} program={p} />
+      <ActivateSheet open={activate} onClose={() => setActivate(false)} id={p.id} />
     </main>
   );
 }
@@ -323,6 +302,43 @@ function CompareSheet({ open, onClose, program }: { open: boolean; onClose: () =
         <ul className="t-sm c2" style={{ margin: 0, paddingLeft: 18 }}>
           {diff.length ? diff.slice(0, 40).map((x) => <li key={x}>{x}</li>) : <li>Nessuna differenza negli esercizi.</li>}
         </ul>
+      </div>
+    </Sheet>
+  );
+}
+
+/** Preview of the coming week before making a program (or the original plan) the default. */
+export function ActivateSheet({ open, onClose, id }: { open: boolean; onClose: () => void; id: string }) {
+  const { settings } = useData();
+  const update = useSettingsUpdater();
+  const days = planDaysFor({ ...settings, activeProgramId: id, originalHidden: id === 'original' ? false : settings.originalHidden });
+  const name = id === 'original' ? 'Scheda FORMA LAB (4 giorni)' : settings.programs.find((p) => p.id === id)?.name ?? '';
+  const wd = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'];
+  return (
+    <Sheet open={open} onClose={onClose} label="Rendi predefinito">
+      <div className="col">
+        <h3 className="t-h2">Rendi predefinito “{name}”</h3>
+        <p className="t-sm c2" style={{ margin: 0 }}>
+          Da oggi Home, “Inizia oggi”, Agenda, Calendario, riprogrammazione e promemoria useranno solo questo programma. Le sedute già fatte, i carichi, le misure e le foto non cambiano.
+        </p>
+        <div className="list">
+          {[1, 2, 3, 4, 5, 6, 0].map((n, i) => {
+            const d = days.find((x) => x.weekday === n);
+            return (
+              <div key={n} className="list-row" style={{ minHeight: 44 }}>
+                <span style={{ width: 90 }} className="t-sm c3">
+                  {wd[i]}
+                </span>
+                <span className="grow t-sm" style={{ fontWeight: d ? 650 : 400, color: d ? undefined : 'var(--t3)' }}>
+                  {d ? d.name : 'Riposo'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <button className="btn primary lg block" onClick={() => update((s) => setDefault(s, id)).then(() => (onClose(), toast(`“${name}” è ora il programma predefinito`)))}>
+          Conferma
+        </button>
       </div>
     </Sheet>
   );

@@ -5,6 +5,8 @@ import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../
 import { isCalibration } from '../lib/plan';
 import { registerCustomExercises } from '../data/catalog';
 import { setWeightUnit } from '../lib/format';
+import { planDaysFor } from '../lib/library';
+import { setPlanSchedule } from '../lib/schedule';
 
 export interface AppData {
   ready: boolean;
@@ -43,6 +45,7 @@ async function load() {
     applied = my;
     registerCustomExercises(settings.customExercises ?? []);
     setWeightUnit(settings.unit ?? 'kg');
+    setPlanSchedule(planDaysFor(settings), settings.planSince ?? '');
     snapshot = {
       ready: true,
       error: null,

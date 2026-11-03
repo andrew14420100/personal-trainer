@@ -1,4 +1,6 @@
-import { Calculator, CheckCircle2, Folder, ChevronRight, Clock, Dumbbell, Layers, Library, Pencil, Play, PlayCircle, Plus, Timer } from 'lucide-react';
+import { Calculator, CheckCircle2, Folder, ChevronRight, Clock, Dumbbell, FileUp, Layers, Library, Pencil, Play, PlayCircle, Plus, RotateCcw, Settings2, Star, Timer } from 'lucide-react';
+import { defaultName, ORIGINAL, restoreOriginal } from '../lib/library';
+import { updateSettings } from '../lib/settings';
 import { allExercises } from '../data/catalog';
 import { FreeStartButton } from './Routines';
 import { ProgramsSection } from './Programs';
@@ -17,20 +19,52 @@ import { navigate } from '../lib/router';
 import { startSession } from '../lib/workout';
 import { Anatomy } from '../components/Anatomy';
 import type { DayId } from '../data/types';
-import { AppBar, Empty, NavBar, Notice, Section } from './kit';
+import { AppBar, Empty, NavBar, Notice, Section, toast } from './kit';
 
 export function Plan() {
   const { settings, calibration, sessions } = useData();
   const wk = weekStart(Date.now());
   const doneThisWeek = new Set(completed(sessions).filter((s) => weekStart(s.startedAt) === wk).map((s) => s.dayId));
+  const visibleRoutines = settings.routines.filter((r) => !r.archived);
   const total = DAYS.reduce((a, d) => a + effectiveDay(d.id, settings, calibration).length, 0);
+  const isDef = settings.activeProgramId === ORIGINAL;
   return (
     <main className="page">
       <AppBar title="Allenamenti" />
       <p className="t-sm c2" style={{ marginTop: -4 }}>
-        Scheda di 4 giorni · {total} posizioni · settimana da lunedì
+        Programma predefinito: <b>{defaultName(settings)}</b>
       </p>
-      <div className="col mt16">
+      <div className="row mt12" style={{ gap: 8 }}>
+        <button className="btn grow" onClick={() => navigate('/schede')}>
+          <Settings2 size={16} /> Gestisci schede
+        </button>
+        <button className="btn grow" onClick={() => navigate('/importa')}>
+          <FileUp size={16} /> Importa
+        </button>
+      </div>
+      {settings.originalHidden ? (
+        <button className="card tap mt16" onClick={() => void updateSettings(restoreOriginal).then(() => toast('Scheda originale ripristinata (non è predefinita)'))}>
+          <div className="row">
+            <RotateCcw size={18} className="c2" />
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                Ripristina modello originale
+              </span>
+              <span className="t-xs c3">La scheda FORMA LAB di 4 giorni è stata eliminata: puoi riaggiungerla quando vuoi.</span>
+            </span>
+          </div>
+        </button>
+      ) : (
+      <>
+      <div className="t-label row mt16" style={{ gap: 6 }}>
+        Scheda originale · 4 giorni · {total} posizioni
+        {isDef && (
+          <span className="chip sm" style={{ color: 'var(--accent)' }}>
+            <Star size={11} fill="currentColor" /> Predefinita
+          </span>
+        )}
+      </div>
+      <div className="col mt8">
         {DAYS.map((d) => {
           const slots = effectiveDay(d.id, settings, calibration);
           const m = aggregate(slots.map((s) => s.exerciseId));
@@ -69,21 +103,23 @@ export function Plan() {
           );
         })}
       </div>
+      </>
+      )}
 
       <ProgramsSection />
 
       <Section title="Le mie schede" action={<button className="link" onClick={() => navigate('/routine/nuova')}>+ Nuova</button>}>
-        {settings.routines.length ? (
+        {visibleRoutines.length ? (
           <div className="col" style={{ gap: 12 }}>
-            {[...new Set(settings.routines.map((r) => r.folder || ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b))).map((f) => (
+            {[...new Set(visibleRoutines.map((r) => r.folder || ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b))).map((f) => (
               <div key={f || '—'}>
-                {(f || settings.routines.some((r) => r.folder)) && (
+                {(f || visibleRoutines.some((r) => r.folder)) && (
                   <div className="t-label row" style={{ marginBottom: 6, gap: 6 }}>
                     <Folder size={13} /> {f || 'Senza cartella'}
                   </div>
                 )}
                 <div className="list">
-                  {settings.routines
+                  {visibleRoutines
                     .filter((r) => (r.folder || '') === f)
                     .map((r) => (
                       <button key={r.id} className="list-row" style={{ ['--day' as string]: r.accent }} onClick={() => navigate(`/routine/${r.id}`)}>

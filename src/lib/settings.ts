@@ -64,6 +64,7 @@ export interface Program {
 export interface Routine {
   id: string;
   name: string;
+  archived?: boolean;
   /** Folder name (4.1); '' = no folder. */
   folder?: string;
   accent: string;
@@ -149,8 +150,12 @@ export interface Settings {
   /** Last time a backup file was exported (ms). */
   lastBackupAt: number;
   programs: Program[];
-  /** '' = the original 4-day plan is the current program. */
+  /** Default program: 'original' (the 4-day plan), 'none' (no program) or a Program id. */
   activeProgramId: string;
+  /** The original 4-day plan was removed by the user (it never comes back by itself). */
+  originalHidden: boolean;
+  /** Date (yyyy-mm-dd) from which the default program drives the calendar ('' = always). */
+  planSince: string;
   previousProgramIds: string[];
   reminders: { time: string; minutesBefore: number };
   /** Plates available in the gym (kg, per side) and bar weight, for the plate calculator. */
@@ -210,7 +215,9 @@ export const DEFAULT_SETTINGS: Settings = {
   rescheduleSince: '',
   lastBackupAt: 0,
   programs: [],
-  activeProgramId: '',
+  activeProgramId: 'original',
+  originalHidden: false,
+  planSince: '',
   previousProgramIds: [],
   reminders: { time: '18:30', minutesBefore: 30 },
   plates: { bar: 20, available: [25, 20, 15, 10, 5, 2.5, 1.25] },
@@ -228,6 +235,8 @@ export async function loadSettings(): Promise<Settings> {
     plates: { ...DEFAULT_SETTINGS.plates, ...(stored?.plates ?? {}) },
     // keep the user's order, add widgets introduced by newer versions at the end
     homeWidgets: mergeWidgets(stored?.homeWidgets),
+    // 5.0 migration: '' (older builds) meant "original plan"
+    activeProgramId: !stored?.activeProgramId ? (stored?.originalHidden ? 'none' : 'original') : stored.activeProgramId,
   };
 }
 

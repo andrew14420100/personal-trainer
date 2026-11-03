@@ -16,16 +16,15 @@ import { prTimeline, weekStreak, PR_LABEL } from '../lib/records';
 import { exName } from '../data/catalog';
 import { startCustom } from '../lib/workout';
 import { MuscleMap } from './Progress';
-import { DAYS } from '../data/program';
+import { planDaysFor, slotsForPlanDay, startPlanDay, dayLink, type PlanDay } from '../lib/library';
+import { FilePlus2, FileUp } from 'lucide-react';
 import { aggregate, MUSCLE_REGION } from '../data/muscles';
 import { photoCredit, restDayPhoto } from '../data/media';
-import { effectiveDay, estimateMinutes } from '../lib/plan';
+import { estimateMinutes } from '../lib/plan';
 import { completed, exerciseHistory, sessionDurationMin, sessionSets, sessionVolume, weekStart } from '../lib/stats';
 import { iso, nextPlanned, parseIso, todayPlan, dateInfo } from '../lib/schedule';
 import { fullDate, greeting, kg, relativeDays, volume } from '../lib/format';
 import { navigate } from '../lib/router';
-import { startSession } from '../lib/workout';
-import type { DayId } from '../data/types';
 import { Empty, Section, Sheet } from './kit';
 import { Legend, WeekStrip, stateLabel } from './Week';
 
@@ -34,8 +33,9 @@ export function Home() {
   const now = new Date();
   const today = todayPlan(sessions, settings.moves, now);
   const next = nextPlanned(settings.moves, now);
-  const shown = today.plan ?? (next ? next.day : DAYS[0]);
-  const slots = effectiveDay(shown.id, settings, calibration);
+  const planDays = planDaysFor(settings);
+  const shown = today.plan ?? next?.day ?? planDays[0] ?? null;
+  const slots = shown ? slotsForPlanDay(shown, settings, calibration) : [];
   const muscles = aggregate(slots.map((s) => s.exerciseId));
   const regions = [...new Set(muscles.primary.map((m) => MUSCLE_REGION[m]))];
   const doneToday = today.sessions[0];
@@ -43,14 +43,14 @@ export function Home() {
   const [sel, setSel] = useState(iso(now));
   const [edit, setEdit] = useState(false);
 
-  const begin = async (dayId: DayId) => {
-    if (!active) await startSession(dayId, settings, calibration, sessions);
+  const begin = async (day: PlanDay) => {
+    if (!active) await startPlanDay(day, settings, calibration, sessions);
     navigate('/allenamento');
   };
   const status = active ? 'In corso' : doneToday ? 'Completato' : today.plan ? 'Da iniziare' : 'Giorno di riposo';
 
   return (
-    <main className="page" style={{ ['--day' as string]: shown.accent }}>
+    <main className="page" style={{ ['--day' as string]: shown?.accent ?? 'var(--accent)' }}>
       <header className="appbar">
         <div>
           <div className="t-sm c3">{fullDate(now)}</div>
@@ -59,7 +59,8 @@ export function Home() {
       </header>
 
       {/* ── Today ─────────────────────────────────────────── */}
-      <article className="hero mt8" aria-label="Allenamento di oggi">
+      {shown ? (
+      <article className="hero mt8" aria-label="Allenamento di oggi" data-plan={shown.id}>
         <img src={today.plan ? shown.photo : restDayPhoto} alt="" style={{ objectPosition: shown.photoPosition }} />
         <span className="credit">{photoCredit(today.plan ? shown.photo : restDayPhoto)}</span>
         <div className="row wrap">
@@ -103,7 +104,7 @@ export function Home() {
               <CheckCircle2 size={20} /> Vedi riepilogo
             </button>
           ) : today.plan ? (
-            <button className="btn primary lg grow" onClick={() => begin(shown.id)}>
+            <button className="btn primary lg grow" onClick={() => begin(shown)}>
               <Play size={18} fill="currentColor" /> Inizia oggi
             </button>
           ) : (
@@ -111,11 +112,14 @@ export function Home() {
               Allenati comunque
             </button>
           )}
-          <button className="btn lg" onClick={() => navigate(`/giorno/${shown.id}`)} aria-label={`Apri ${shown.name}`}>
+          <button className="btn lg" onClick={() => navigate(dayLink(shown))} aria-label={`Apri ${shown.name}`}>
             <ArrowRight size={20} />
           </button>
         </div>
       </article>
+      ) : (
+        <NoProgramHero />
+      )}
       {calibration && <p className="t-xs c3 mt8">Settimana di calibrazione: volume ridotto nelle prime 4 sedute (modificabile nel Profilo).</p>}
 
       <div className="row spread mt24" style={{ marginBottom: 4 }}>
@@ -137,14 +141,14 @@ export function Home() {
           Quale allenamento?
         </h3>
         <div className="list">
-          {DAYS.map((d) => (
+          {planDays.map((d) => (
             <button
               key={d.id}
               className="list-row"
               style={{ ['--day' as string]: d.accent }}
               onClick={() => {
                 setPick(false);
-                void begin(d.id);
+                void begin(d);
               }}
             >
               <span className="dot" />
@@ -175,7 +179,7 @@ function SelectedDay({ date }: { date: string }) {
           Riepilogo
         </button>
       ) : info.plan ? (
-        <button className="btn sm" onClick={() => navigate(`/giorno/${info.plan!.id}`)}>
+        <button className="btn sm" onClick={() => navigate(dayLink(info.plan!))}>
           Apri
         </button>
       ) : null}
@@ -598,5 +602,31 @@ function WidgetEditor({ open, onClose }: { open: boolean; onClose: () => void })
         Fatto
       </button>
     </Sheet>
+  );
+}
+
+/** Zero programs is a valid state: nothing is restored automatically. */
+function NoProgramHero() {
+  return (
+    <article className="card mt8 col" aria-label="Nessuna scheda attiva" style={{ textAlign: 'center', padding: 24 }}>
+      <div style={{ width: 56, height: 56, borderRadius: 18, background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', margin: '0 auto' }}>
+        <FileUp size={26} color="var(--accent)" />
+      </div>
+      <h2 className="t-h1">Nessuna scheda attiva</h2>
+      <p className="t-sm c2" style={{ margin: 0 }}>
+        Importa una scheda (anche creata con ChatGPT), creane una o scegli un programma predefinito in Gestisci schede. Lo storico dei tuoi allenamenti resta sempre disponibile.
+      </p>
+      <button className="btn primary lg block" onClick={() => navigate('/importa')}>
+        <FileUp size={18} /> Importa scheda
+      </button>
+      <div className="row">
+        <button className="btn grow" onClick={() => navigate('/routine/nuova')}>
+          <FilePlus2 size={16} /> Crea scheda
+        </button>
+        <button className="btn grow" onClick={() => navigate('/schede')}>
+          Gestisci schede
+        </button>
+      </div>
+    </article>
   );
 }

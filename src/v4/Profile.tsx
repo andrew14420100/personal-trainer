@@ -13,6 +13,7 @@ import type { MigrationReport } from '../lib/migration';
 import type { Settings as S } from '../lib/settings';
 import { updateSettings } from '../lib/settings';
 import { remindersIcs, setsCsv } from '../lib/exports';
+import { defaultName } from '../lib/library';
 import { MUSCLE_LABEL } from '../data/muscles';
 import { Acc, AppBar, Confirm, Notice, Section, Seg, Sheet, Switch, toast } from './kit';
 
@@ -90,7 +91,16 @@ export function Profile() {
 
       <Section title="Scheda">
         <div className="list">
-          {DAYS.map((d) => (
+          <button className="list-row" onClick={() => navigate('/schede')}>
+            <span className="grow">
+              <span className="t-sm" style={{ display: 'block', fontWeight: 650 }}>
+                Gestisci schede
+              </span>
+              <span className="t-xs c3">Predefinito: {defaultName(settings)} · elimina, archivia, duplica, cambia predefinito</span>
+            </span>
+            <ChevronRight size={18} className="c3" />
+          </button>
+          {!settings.originalHidden && DAYS.map((d) => (
             <button key={d.id} className="list-row" style={{ ['--day' as string]: d.accent }} onClick={() => navigate(`/giorno/${d.id}/modifica`)}>
               <span className="dot" />
               <span className="grow">

@@ -1,7 +1,7 @@
 // 4.1 exports: CSV of every logged set, calendar reminders (.ics), share image of a session.
 import { EXERCISE_MUSCLES } from '../data/muscles';
 import { exOrFallback } from '../data/catalog';
-import { DAYS } from '../data/program';
+import { planDaysFor } from './library';
 import type { Session } from './db';
 import { completed, sessionDurationMin, sessionSets, sessionVolume, doneSets } from './stats';
 import { sessionMeta } from './meta';
@@ -37,12 +37,12 @@ export function setsCsv(sessions: Session[], settings: Settings): string {
 const pad = (n: number) => String(n).padStart(2, '0');
 const RRULE_DAY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-/** Weekly calendar events for the 4 plan days, with an alarm, to import into the phone calendar. */
+/** Weekly calendar events for the days of the default program, with an alarm, to import into the phone calendar. */
 export function remindersIcs(settings: Settings, now = new Date()): string {
   const [h, m] = settings.reminders.time.split(':').map(Number);
   const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}00Z`;
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FORMA LAB//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
-  for (const d of DAYS) {
+  for (const d of planDaysFor(settings)) {
     const first = new Date(now);
     first.setDate(first.getDate() + ((d.weekday - first.getDay() + 7) % 7));
     const start = `${first.getFullYear()}${pad(first.getMonth() + 1)}${pad(first.getDate())}T${pad(h)}${pad(m)}00`;
@@ -51,13 +51,13 @@ export function remindersIcs(settings: Settings, now = new Date()): string {
     const end = `${endD.getFullYear()}${pad(endD.getMonth() + 1)}${pad(endD.getDate())}T${pad(endD.getHours())}${pad(endD.getMinutes())}00`;
     lines.push(
       'BEGIN:VEVENT',
-      `UID:forma-lab-${d.id}@forma-lab`,
+      `UID:forma-lab-${d.id.replace(/[^a-zA-Z0-9-]/g, '-')}@forma-lab`,
       `DTSTAMP:${stamp}`,
       `DTSTART:${start}`,
       `DTEND:${end}`,
       `RRULE:FREQ=WEEKLY;BYDAY=${RRULE_DAY[d.weekday]}`,
       `SUMMARY:FORMA LAB · ${d.name}`,
-      `DESCRIPTION:${d.code} — apri FORMA LAB e tocca Inizia allenamento.`,
+      `DESCRIPTION:${d.code ?? d.name} — apri FORMA LAB e tocca Inizia allenamento.`,
       'BEGIN:VALARM',
       'ACTION:DISPLAY',
       `DESCRIPTION:Allenamento: ${d.name}`,

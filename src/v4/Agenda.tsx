@@ -2,9 +2,10 @@
 // automatic rescheduling notices with undo, weekly comparison.
 import { useRef, useState } from 'react';
 import { CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, Clock, Lock, Moon, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { slotsForPlanDay } from '../lib/library';
 import { useData, useSettingsUpdater } from '../app/store';
 import { aggregate, MUSCLE_REGION } from '../data/muscles';
-import { effectiveDay, estimateMinutes } from '../lib/plan';
+import { estimateMinutes } from '../lib/plan';
 import { completed, sessionDurationMin, sessionReps, sessionSets, sessionVolume, weekStart } from '../lib/stats';
 import { prTimeline } from '../lib/records';
 import { addDays, dateInfo, iso, mondayOf, parseIso } from '../lib/schedule';
@@ -137,7 +138,7 @@ function DayAgenda({ date }: { date: string }) {
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('');
   const [blocks, setBlocks] = useState(false);
-  const slots = info.plan ? effectiveDay(info.plan.id, settings, calibration) : [];
+  const slots = info.plan ? slotsForPlanDay(info.plan, settings, calibration) : [];
   const regions = [...new Set(aggregate(slots.map((s) => s.exerciseId)).primary.map((m) => MUSCLE_REGION[m]))];
   const nextPlan = (() => {
     for (let i = 1; i <= 7; i++) {
@@ -178,7 +179,11 @@ function DayAgenda({ date }: { date: string }) {
             </button>
           </div>
         ))}
-        {info.plan && !info.sessions.length && <DayPanel date={date} />}
+        {info.plan && !info.sessions.length && (
+          <div data-plan={info.plan.id}>
+            <DayPanel date={date} />
+          </div>
+        )}
         {!info.plan && !info.sessions.length && (
           <div className="card rest-card row" style={{ gap: 14 }}>
             <Moon size={26} color="var(--accent)" />

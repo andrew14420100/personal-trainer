@@ -14,6 +14,7 @@ import { Videos } from '../v4/Videos';
 import { DayEditor, Library, RoutineEditor, RoutineView } from '../v4/Routines';
 import { Tools } from '../v4/Tools';
 import { ImportPage } from '../v4/Import';
+import { ManageSchede } from '../v4/Manage';
 import { ProgramView } from '../v4/Programs';
 import { LivePill, RestBar, TabBar } from '../v4/Shell';
 import { Agenda } from '../v4/Agenda';
@@ -62,6 +63,9 @@ export function App() {
       break;
     case 'libreria':
       screen = <Library />;
+      break;
+    case 'schede':
+      screen = <ManageSchede />;
       break;
     case 'importa':
       screen = <ImportPage />;

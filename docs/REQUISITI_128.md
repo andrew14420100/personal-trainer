@@ -134,3 +134,19 @@ Aggiornata al 3 novembre 2026 (fasi 1–3 e parte della 4). Uno stato "completat
 | 126 | Catalogo macchinari con foto | — | — | — | non iniziato | Da sviluppare; servono foto con licenza |
 | 127 | iPhone principale, PC secondario | Mobile-first, layout desktop | tutta l’app | e2e run.mjs (iPhone 14 Pro, iPhone SE, desktop emulati) | completato | Non provato su iPhone fisico |
 | 128 | Massimo numero di funzionalità | Fasi 1–3 + parte della 4 | — | — | parziale | Vedi elenco funzioni incomplete |
+
+## Gestione schede e programma predefinito (richiesta PR #5)
+
+| Requisito | Stato | Dove |
+|---|---|---|
+| Gestisci schede: elenco, ricerca, filtri, selezione multipla, Seleziona tutte | ✅ | `src/v4/Manage.tsx` (`/schede`) |
+| Elimina selezionate / Archivia / Ripristina / Duplica / Modifica / Rendi predefinita | ✅ | `Manage.tsx`, `src/lib/library.ts` |
+| Scheda originale eliminabile, non ricompare da sola, "Ripristina modello originale" | ✅ | `deleteSchede`, `restoreOriginal` |
+| Programma predefinito unico per Home, Inizia oggi, Agenda, Calendario, riprogrammazione, promemoria .ics | ✅ | `planDaysFor` + `setPlanSchedule` |
+| Cambio predefinito: anteprima della settimana, il passato non viene riscritto (`planSince`) | ✅ | `ActivateSheet`, `setDefault` |
+| Zero schede → Home "Nessuna scheda attiva" con Importa / Crea / Gestisci | ✅ | `Home.tsx` |
+| Import: Aggiungi / Aggiungi e rendi predefinita / Sostituisci predefinita / Sostituisci tutte (conferma esplicita) | ✅ | `Import.tsx`, `applyImport` |
+| Eliminazioni: conteggi, backup, doppia conferma (Continua + ELIMINA), Annulla | ✅ | `Manage.tsx` |
+| Storico, carichi, misure, foto mai toccati; allenamento in corso blocca l'eliminazione | ✅ | `blockingSession` |
+| Programma "Ripartenza intelligente" 8 settimane importabile e attivabile | ✅ | `public/formats/chatgpt-ripartenza-8-settimane.json` |
+| Test | ✅ | `tests/unit/library.test.ts` (15), e2e blocco "PR5" su iPhone emulato |
