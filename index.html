@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0b" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="description" content="FORMA LAB — applicazione personale di allenamento" />
+    <!-- iOS Home Screen web app -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FORMA LAB" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <title>FORMA LAB</title>
+    <style>
+      html,body{background:#0a0a0b;color:#f4f4f1;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+      /* Shown only if the app's JavaScript never starts (React replaces #root's content). */
+      .boot{max-width:420px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 40px) 22px 40px;opacity:0;animation:boot-in .4s 4s forwards}
+      .boot b{display:block;letter-spacing:.28em;font-size:15px;margin-bottom:22px}
+      .boot h1{font-size:24px;margin:0 0 10px}.boot p,.boot li{color:#b9b9bf;font-size:15px;line-height:1.5}
+      .boot code{background:#26262b;padding:1px 6px;border-radius:6px;color:#f4f4f1}
+      @keyframes boot-in{to{opacity:1}}
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot" role="alert">
+        <b>FORMA·LAB</b>
+        <h1>L’app non si è avviata</h1>
+        <p>La pagina è arrivata, ma il programma dell’app non è stato caricato. Cause più comuni:</p>
+        <ul>
+          <li>su Cloudflare è stato pubblicato il codice sorgente invece della build: serve il comando <code>npm run build</code> e la cartella di output <code>dist</code>;</li>
+          <li>connessione assente al primo avvio;</li>
+          <li>versione di iOS troppo vecchia (serve iOS 15.4 o successivo).</li>
+        </ul>
+        <p>Vedi <code>docs/PUBBLICAZIONE.md</code>, sezione “Schermata nera”.</p>
+      </div>
+    </div>
+    <noscript>FORMA LAB richiede JavaScript.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
