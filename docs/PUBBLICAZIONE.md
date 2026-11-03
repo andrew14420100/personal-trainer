@@ -1,3 +1,5 @@
+> **Senza installare nulla sul PC:** compilazione, test e pubblicazione avvengono online con GitHub Actions. Segui [PUBBLICAZIONE_ONLINE.md](PUBBLICAZIONE_ONLINE.md).
+
 # Pubblicazione privata e installazione su iPhone
 
 Obiettivo: aprire un indirizzo HTTPS in Safari, autenticarti, scegliere **Aggiungi alla schermata Home** e usare FORMA LAB come un’app.

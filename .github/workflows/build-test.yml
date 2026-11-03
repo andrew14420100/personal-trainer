@@ -1,0 +1,65 @@
+# Reusable job: install, build and test FORMA LAB on GitHub's servers (nothing runs on your PC).
+# Produces the "dist" artifact used by the deploy workflows.
+name: Compila e testa
+
+on:
+  workflow_call:
+    inputs:
+      e2e:
+        description: Esegui anche i test end-to-end nel browser
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Compila e testa (Node 22)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installa le dipendenze (npm ci)
+        run: npm ci
+
+      - name: Compila (npm run build)
+        run: npm run build
+
+      - name: Test unitari (npm test)
+        run: npm test
+
+      - name: Prepara il browser per i test end-to-end
+        if: ${{ inputs.e2e }}
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Test end-to-end (iPhone 14 Pro, iPhone SE, desktop)
+        if: ${{ inputs.e2e }}
+        run: npm run test:e2e
+
+      - name: Schermate dei test
+        if: ${{ always() && inputs.e2e }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: schermate-test
+          path: tests/e2e/screens/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Salva la build (dist + functions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sito
+          path: |
+            dist/
+            functions/
+          retention-days: 30
+          if-no-files-found: error

@@ -1,0 +1,114 @@
+# PREVIEW (anteprima protetta): build + test, then deploy to a Cloudflare Pages preview alias
+# (https://<alias>.forma-lab.pages.dev). Never deploys to production: it aborts if the alias equals
+# the project's production branch. Runs on every push to a branch other than main, or manually.
+name: Pubblica anteprima
+
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+    inputs:
+      alias:
+        description: Nome dell'anteprima (diventa https://<nome>.forma-lab.pages.dev)
+        default: anteprima
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-preview
+  cancel-in-progress: false
+
+env:
+  PROJECT: forma-lab
+  ALIAS: ${{ inputs.alias || 'anteprima' }}
+  WRANGLER: wrangler@3.114.17
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-test.yml
+    with:
+      e2e: true
+
+  deploy:
+    name: Anteprima su Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Controlla i segreti GitHub
+        id: secrets
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
+            echo "::warning title=Segreti mancanti::Aggiungi CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID in Settings → Secrets and variables → Actions. Compilazione e test sono stati eseguiti; la pubblicazione è saltata."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          sparse-checkout: scripts
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          node-version: 22
+
+      - name: Controlla il progetto Cloudflare (mai in produzione)
+        if: steps.secrets.outputs.ok == 'true'
+        id: project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cf-project.mjs "$PROJECT" "$ALIAS" preview
+
+      - name: Scarica la build testata
+        if: steps.secrets.outputs.ok == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: sito
+          path: deploy
+
+      # Deploy from a folder WITHOUT wrangler.toml: the dashboard configuration (variables and
+      # authentication secrets) stays the source of truth and is never modified.
+      - name: Pubblica l'anteprima (dist + Pages Functions)
+        if: steps.secrets.outputs.ok == 'true'
+        id: deploy
+        working-directory: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -f dist/index.html && test -f functions/_middleware.ts
+          npx --yes "$WRANGLER" pages deploy dist --project-name="$PROJECT" --branch="$ALIAS" \
+            --commit-hash="$GITHUB_SHA" --commit-message="${GITHUB_REF_NAME} ${GITHUB_SHA::7}" --commit-dirty=true | tee ../deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.pages\.dev' ../deploy.log | tail -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Verifica protezione e funzionamento
+        if: steps.secrets.outputs.ok == 'true'
+        env:
+          FORMA_LAB_PIN: ${{ secrets.FORMA_LAB_PIN }}
+        run: |
+          node scripts/verify-deploy.mjs "https://${ALIAS}.${{ steps.project.outputs.subdomain }}" --allow-unconfigured
+          if [ -n "${{ steps.deploy.outputs.url }}" ]; then node scripts/verify-deploy.mjs "${{ steps.deploy.outputs.url }}" --allow-unconfigured; fi
+
+      - name: Riepilogo
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          {
+            echo "## Anteprima pubblicata"
+            echo ""
+            echo "- Indirizzo fisso: https://${ALIAS}.${{ steps.project.outputs.subdomain }}"
+            echo "- Questa versione: ${{ steps.deploy.outputs.url }}"
+            echo "- Produzione (${{ steps.project.outputs.production_branch }}): **non modificata**"
+            echo ""
+            echo "L'anteprima ha un indirizzo diverso dal sito principale: i dati degli allenamenti del sito principale non sono visibili qui e non vengono toccati."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,113 @@
+# PRODUCTION: manual only. Requires typing PUBBLICA and the approval configured on the GitHub
+# environment "production" (Settings → Environments → production → Required reviewers).
+# Builds and tests again, deploys dist + Pages Functions to the production branch of the existing
+# Pages project "forma-lab", then checks that the site is private and working.
+name: Pubblica in produzione
+
+on:
+  workflow_dispatch:
+    inputs:
+      conferma:
+        description: Scrivi PUBBLICA per confermare la pubblicazione sul sito principale
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  PROJECT: forma-lab
+  WRANGLER: wrangler@3.114.17
+
+jobs:
+  check:
+    name: Conferma
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Conferma scritta
+        env:
+          CONFERMA: ${{ inputs.conferma }}
+        run: |
+          if [ "$CONFERMA" != "PUBBLICA" ]; then
+            echo "::error::Pubblicazione annullata: devi scrivere PUBBLICA (in maiuscolo)."
+            exit 1
+          fi
+
+  build:
+    needs: check
+    uses: ./.github/workflows/build-test.yml
+    with:
+      e2e: true
+
+  deploy:
+    name: Produzione su Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ steps.project.outputs.prod_url }}
+    steps:
+      - name: Controlla i segreti GitHub
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
+            echo "::error::Mancano CLOUDFLARE_API_TOKEN e/o CLOUDFLARE_ACCOUNT_ID (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Controlla il progetto Cloudflare
+        id: project
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cf-project.mjs "$PROJECT" "" production
+
+      - name: Scarica la build testata
+        uses: actions/download-artifact@v4
+        with:
+          name: sito
+          path: deploy
+
+      # Deploy from a folder WITHOUT wrangler.toml so the dashboard configuration (variables and
+      # authentication secrets) is never modified.
+      - name: Pubblica in produzione (dist + Pages Functions)
+        working-directory: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROD_BRANCH: ${{ steps.project.outputs.production_branch }}
+        run: |
+          test -f dist/index.html && test -f functions/_middleware.ts
+          npx --yes "$WRANGLER" pages deploy dist --project-name="$PROJECT" --branch="$PROD_BRANCH" \
+            --commit-hash="$GITHUB_SHA" --commit-message="Produzione ${GITHUB_REF_NAME} ${GITHUB_SHA::7}" --commit-dirty=true
+
+      - name: Verifica che il sito sia privato e funzionante
+        env:
+          FORMA_LAB_PIN: ${{ secrets.FORMA_LAB_PIN }}
+        run: node scripts/verify-deploy.mjs "${{ steps.project.outputs.prod_url }}"
+
+      - name: Riepilogo
+        run: |
+          {
+            echo "## Produzione aggiornata"
+            echo ""
+            echo "- Sito: ${{ steps.project.outputs.prod_url }}"
+            echo "- Commit: ${GITHUB_SHA::7} (${GITHUB_REF_NAME})"
+            echo ""
+            echo "I dati degli allenamenti restano sui dispositivi: all'apertura l'app mostra \"Nuova versione disponibile → Aggiorna\"."
+            echo "Per tornare indietro: Cloudflare → Workers & Pages → forma-lab → Deployments → deployment precedente → Rollback."
+          } >> "$GITHUB_STEP_SUMMARY"

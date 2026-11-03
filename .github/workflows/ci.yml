@@ -1,0 +1,23 @@
+# Every push and pull request: build + all tests. No secrets, no deploy.
+name: CI
+
+# Pushes to other branches are built and tested by "Pubblica anteprima" (same tests).
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/build-test.yml
+    with:
+      e2e: true

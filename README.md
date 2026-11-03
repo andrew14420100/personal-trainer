@@ -18,6 +18,10 @@ Applicazione personale di allenamento: PWA privata e gratuita, installabile su i
 
 Schermate: [`docs/screenshots/`](docs/screenshots) (i file `4.0-*.png` contengono dati di prova dei test).
 
+## Pubblicazione online (nessun software sul PC)
+
+GitHub Actions compila, testa e pubblica su Cloudflare Pages: anteprima protetta automatica, produzione solo con la tua approvazione. Guida: [docs/PUBBLICAZIONE_ONLINE.md](docs/PUBBLICAZIONE_ONLINE.md).
+
 ## Avvio rapido
 
 Requisiti: Node.js 20+ (testato con 22).
