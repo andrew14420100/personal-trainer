@@ -719,7 +719,7 @@ async function run(deviceName, label, full) {
     await layoutChecks(page, `${label} empty home`);
     // import after "Elimina tutte"
     await page.getByRole('button', { name: 'Importa scheda' }).first().click();
-    await page.setInputFiles('#import-program-file', join(root, 'public/formats/chatgpt-ripartenza-8-settimane.json'));
+    await page.getByRole('button', { name: /Programma pronto: Ripartenza intelligente/ }).click();
     await page.waitForSelector('#anteprima');
     while (await amb2.count()) await amb2.first().selectOption({ index: 1 });
     await page.getByRole('radio', { name: /^Aggiungi e rendi predefinita/ }).click();

@@ -11,6 +11,7 @@ import { buildDraft, diffPrograms, draftProblems, exportProgram, findDuplicate, 
 import { navigate } from '../lib/router';
 import { NavBar, Notice, Section, Seg, toast } from './kit';
 import { ExercisePicker } from './Routines';
+import RIPARTENZA from '../../public/formats/chatgpt-ripartenza-8-settimane.json?raw';
 import { allSchede, applyImport, defaultName, NONE, type ImportAction } from '../lib/library';
 
 export const CHATGPT_PROMPT = `Crea il programma di allenamento nel formato "FORMA LAB Workout Exchange — versione 1".
@@ -81,6 +82,15 @@ export function ImportPage() {
           </span>
           <Upload size={18} className="c3" />
         </label>
+        <button className="card tap row" style={{ display: 'flex', gap: 14, textAlign: 'left' }} onClick={() => (setFileName('chatgpt-ripartenza-8-settimane.json'), load(RIPARTENZA, 'Ripartenza intelligente'))}>
+          <Sparkles size={24} color="var(--accent)" />
+          <span className="grow">
+            <span className="t-h3" style={{ display: 'block' }}>
+              Programma pronto: Ripartenza intelligente
+            </span>
+            <span className="t-xs c3">Upper/Lower · 8 settimane · 4 giorni (lun, mar, gio, ven) · già incluso nell’app</span>
+          </span>
+        </button>
         <div className="card col" style={{ gap: 8 }}>
           <div className="row">
             <ClipboardPaste size={22} color="var(--accent)" />
