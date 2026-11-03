@@ -82,8 +82,17 @@ Il workflow parte da solo anche ad ogni nuova modifica sul ramo.
 
 ## Passo 7 — Pubblica in produzione (solo quando approvi)
 
+**Prima volta: porta i workflow su `main`.** GitHub mostra il pulsante "Run workflow" solo per i workflow presenti nel ramo principale `main`. Per questo "Pubblica in produzione" compare in Actions solo dopo aver unito la pull request della 4.1.
+
+1. **Prima di unire**, controlla su Cloudflare → forma-lab → **Settings → Builds** se il progetto è collegato a GitHub ("Git repository: connected").
+   - **Se NON è collegato** (caricamento diretto, caso più probabile): unire la pull request **non pubblica niente**. I workflow di GitHub non pubblicano mai su `main` da soli.
+   - **Se è collegato**: unire la pull request equivale a pubblicare in produzione, perché Cloudflare compila `main` da solo. Uniscila solo quando hai approvato l'anteprima.
+2. GitHub → **Pull requests** → *FORMA LAB 4.1…* → **Ready for review** (se è in bozza) → **Merge pull request** → **Confirm merge**.
+
+Poi, per la pubblicazione:
+
 1. GitHub → **Actions** → **Pubblica in produzione** → **Run workflow**.
-2. **Branch:** `claude/forma-lab-2-rebuild-qsdfkt`, cioè la versione che hai provato in anteprima.
+2. **Branch:** `main`, cioè la versione che hai provato in anteprima e unito.
 3. Nel campo di conferma scrivi `PUBBLICA` → **Run workflow**.
 4. Dopo compilazione e test il run si ferma su **Waiting for review** → **Review deployments** → spunta `production` → **Approve and deploy**.
 5. Al termine controlla che la verifica sia verde: sito chiuso senza PIN e, con il segreto facoltativo, app funzionante dopo il login.
